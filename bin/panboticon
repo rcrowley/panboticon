@@ -1,0 +1,55 @@
+#!/bin/sh
+
+set -e
+
+export PANBOTICON_PREFIX="$(cd "$(dirname "$0")/.." && pwd)"
+export PANBOTICON_BIN="$PANBOTICON_PREFIX/bin"
+export PANBOTICON_LIB="$PANBOTICON_PREFIX/lib/panboticon"
+export PANBOTICON_LIBEXEC="$PANBOTICON_PREFIX/libexec/panboticon"
+
+usage() {
+    printf "Usage: panboticon [-c \e[4mconfiguration-filename\e[0m] \e[4msubcommand\e[0m [\e[4m...\e[0m]\n" >&2
+    ls -1 "$PANBOTICON_LIBEXEC" |
+    sort |
+    while read SUBCOMMAND
+    do
+        echo >&2
+        "$PANBOTICON_LIBEXEC/$SUBCOMMAND" --help 2>&1 |
+        sed "
+            s/^Usage: //
+            s/^/       /
+        " >&2
+    done
+    echo >&2
+    echo "Example configuration file:" >&2
+    cat "$PANBOTICON_LIB/config.json"
+    exit "$1"
+}
+
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-c"|"--conf"|"--config"|"--configuration") PANBOTICON_CONFIG="$2" shift 2;;
+        "-c"*) PANBOTICON_CONFIG="$(echo "$1" | cut -c "3-")" shift;;
+        "--conf="*|"--config="*|"--configuration="*) PANBOTICON_CONFIG="$(echo "$1" | cut -d "=" -f "2-")" shift;;
+
+        "-h"|"--help") usage 0;;
+
+        *)
+            if [ ! -x "$PANBOTICON_LIBEXEC/$1" ]
+            then usage 1
+            fi
+            SUBCOMMAND="$1" break;;
+
+    esac
+done
+if [ -z "$SUBCOMMAND" ]
+then usage 1
+fi
+
+. "$PANBOTICON_LIB/configure.sh"
+
+export PATH="$PANBOTICON_LIBEXEC:$PATH"
+
+exec "$SUBCOMMAND" "$@"

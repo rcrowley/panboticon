@@ -1,0 +1,50 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon boxen [-f \e[4mformat\e[0m] [-r \e[4mregion\e[0m]\n" >&2
+    printf "  -f \e[4mformat\e[0m  output format (one of \"all\", \"id\", \"ip\", \"json\", \"name\"; defaults to \"name\")\n" >&2
+    printf "  -r \e[4mregion\e[0m  AWS region\n" >&2
+    exit "$1"
+}
+
+FORMAT="name"
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-f"|"--format") FORMAT="$2" shift 2;;
+        "-f"*) FORMAT="$(echo "$1" | cut -c"3-")" shift;;
+        "--format="*) FORMAT="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-r"|"--region") PANBOTICON_REGION="$2" shift 2;;
+        "-r"*) PANBOTICON_REGION="$(echo "$1" | cut -c"3-")" shift;;
+        "--region="*) PANBOTICON_REGION="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-h"|"--help") usage 0;;
+
+        *) usage 1;;
+
+    esac
+done
+
+. "$PANBOTICON_LIB/aws.sh"
+
+aws ec2 describe-instances --filters \
+    Name="instance-state-name",Values="running" \
+    Name="tag:Manager",Values="Panboticon" |
+case "$FORMAT" in
+    "all") exec jq -e -r '.Reservations[].Instances[] | "\(.Tags[] | select(.Key == "Name").Value) \(.PublicIpAddress) \(.InstanceId)"';;
+    "id") exec jq -e -r '.Reservations[].Instances[].InstanceId';;
+    "ip") exec jq -e -r '.Reservations[].Instances[].PublicIpAddress';;
+    "json")
+        if [ -t 1 ]
+        then exec less
+        else exec cat
+        fi;;
+    "name") exec jq -e -r '.Reservations[].Instances[].Tags[] | select(.Key == "Name").Value';;
+esac

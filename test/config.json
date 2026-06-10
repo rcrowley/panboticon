@@ -1,0 +1,18 @@
+{
+    "#": "This is a test configuration file.",
+
+    "PANBOTICON_REGION": "",
+    "PANBOTICON_AZ": "usw2-az3",
+    "PANBOTICON_VPC_ID": "vpc-d2264baa",
+    "PANBOTICON_SUBNET_ID": "",
+    "PANBOTICON_INSTANCE_PROFILE": "test",
+    "PANBOTICON_INSTANCE_TYPE": "t4g.nano",
+    "PANBOTICON_HUMAN_USER": "rcrowley",
+    "PANBOTICON_BOT_USER": "rbotley",
+    "PANBOTICON_HUMAN_EMAIL": "rcrowley@rcrowley.org",
+    "PANBOTICON_BOT_EMAIL": "rbotley@rcrowley.org",
+    "PANBOTICON_HUMAN_SHELL": "/bin/zsh",
+    "PANBOTICON_BOT_SHELL": "/bin/bash",
+    "PANBOTICON_HUMAN_BOOTSTRAP": "bootstrap.sh",
+    "PANBOTICON_BOT_BOOTSTRAP": ""
+}

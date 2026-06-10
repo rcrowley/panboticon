@@ -1,0 +1,41 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon ssh [-b] [...] [\e[4mname\e[0m]\n" >&2
+    printf "  -b        SSH as the bot user instead of the human user\n" >&2
+    printf "  \e[4mname\e[0m  name of the Panboticon instance to SSH to (inferred from \`panboticon boxen\` if not given and there's only one)\n" >&2
+    exit "$1"
+}
+
+BOT="" USER="$PANBOTICON_HUMAN_USER"
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-b"|"--bot") BOT="-b" USER="$PANBOTICON_BOT_USER" shift;;
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+if [ -z "$1" ]
+then
+    boxen >"$TMP/boxen.txt"
+    if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
+    then exec ssh $BOT -l "$USER" "$(cat "$TMP/boxen.txt")"
+    else usage 1
+    fi
+fi
+
+exec "$(
+    which -a "ssh" |
+    grep -v "$PANBOTICON_LIBEXEC" |
+    head -n 1
+)" -l "$USER" "$@"

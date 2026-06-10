@@ -1,0 +1,112 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon bootstrap \e[4mname\e[0m[...]\n" >&2
+    printf "  \e[4mname\e[0m  name of the Panboticon instance to bootstrap\n" >&2
+    exit "$1"
+}
+
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+if [ -z "$1" ]
+then usage 1
+fi
+
+while [ "$#" -gt 0 ]
+do
+    NAME="$1" shift
+    if [ ! -f "$HOME/.ssh/$NAME.ssh_config" ]
+    then
+        echo "Could not find Panboticon instance $NAME to bootstrap." >&2
+        continue
+    fi
+    echo "Bootstrapping Panboticon instance $NAME ..." >&2
+
+    # Install gh, iptables-persistent, screen, and tmux - almost everything we
+    # need to let the bot run wild in its cell.
+    ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "screen" "tmux"
+
+    # Deny access to the EC2 IMDS before any human or bot user code runs.
+    ssh "$NAME" sudo iptables -I OUTPUT -d "169.254.169.254/32" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+    ssh "$NAME" sudo ip6tables -I OUTPUT -d "fd00:ec2::254/128" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+
+    # Authenticate both the human and the bot with GitHub. These boxen are
+    # after all also usable by the human as regular development machines.
+    echo "Authenticating human and bot user with GitHub ..." >&2
+    echo "Running \`gh auth login\` for the human user, $PANBOTICON_HUMAN_USER." >&2
+    ssh "$NAME" gh auth status \|\| gh auth login
+    ssh "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
+    ssh "$NAME" git config --global "user.email" "$PANBOTICON_HUMAN_EMAIL"
+    echo >&2
+    echo "Running \`gh auth login\` for the bot user, $PANBOTICON_BOT_USER. " >&2
+    ssh -b "$NAME" gh auth status \|\| gh auth login
+    ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
+    ssh -b "$NAME" git config --global "user.email" "$PANBOTICON_BOT_EMAIL"
+    echo >&2
+    echo "... Done!" >&2
+
+    # Install and configure Claude Code.
+    #
+    # Until <https://github.com/anthropics/claude-code/issues/21570>, we'll
+    # have to settle for installing Claude Code once per user as directed by
+    # <https://claude.com/product/claude-code>.
+    ssh "$NAME" sh -c "test -x ~/.local/bin/claude || curl -fsSL https://claude.ai/install.sh | bash"
+    ssh -b "$NAME" sh -c "test -x ~/.local/bin/claude || curl -fsSL https://claude.ai/install.sh | bash"
+
+    # TODO Install and configure Codex, too.
+
+    # Run additional configured bootstrapping programs for both human and bot.
+    if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
+    then
+        scp -r "$HOME/.gnupg" "$PANBOTICON_HUMAN_USER@$NAME:" # XXX HERE BE DRAGONS (surely this is just a bad idea but I don't have a better one)
+        EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
+        scp "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:panboticon-bootstrap.$EXT"
+        case "$EXT" in
+            "go") ssh "$NAME" go run "panboticon-bootstrap.$EXT";;
+            "py") ssh "$NAME" python "panboticon-bootstrap.$EXT";;
+            "rb") ssh "$NAME" ruby "panboticon-bootstrap.$EXT";;
+            *) ssh "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
+        esac
+    fi
+    if [ -f "$PANBOTICON_BOT_BOOTSTRAP" ]
+    then
+        EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
+        scp "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:panboticon-bootstrap.$EXT"
+        case "$EXT" in
+            "go") ssh -b "$NAME" go run "panboticon-bootstrap.$EXT";;
+            "py") ssh -b "$NAME" python "panboticon-bootstrap.$EXT";;
+            "rb") ssh -b "$NAME" ruby "panboticon-bootstrap.$EXT";;
+            *) ssh -b "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
+        esac
+    fi
+
+    # Save the iptables(8) rules that deny the bot user access to the EC2 IMDS
+    # and rules added by Docker, Tailscale, or whatever else the configured
+    # bootstrapping programs installed.
+    ssh "$NAME" sudo netfilter-persistent save
+
+    # Copy the human's ~/.screenrc and ~/.tmux.conf into the bot's home
+    # directory. The bot's not going to use these tools but when a human logs
+    # in and their keyboard configuration isn't their usual, it's annoying.
+    for FILENAME in ".screenrc" ".tmux.conf"
+    do
+        if ssh "$NAME" test -f "/home/$PANBOTICON_HUMAN_USER/$FILENAME"
+        then ssh "$NAME" sudo install -g "$PANBOTICON_BOT_USER" -m 0664 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_HUMAN_USER/$FILENAME" "/home/$PANBOTICON_BOT_USER"
+        fi
+    done
+
+    echo "... Done!" >&2
+done

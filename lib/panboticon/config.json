@@ -1,0 +1,39 @@
+{
+    "#": "This is an example Panboticon configuration file. Store your version of this JSON file in ~/.panboticon.json. If you wish for this file to be elsewhere, set PANBOTICON_CONFIG in your environment to its pathname or provide the -c option every time you invoke the panboticon command. Any of these may be set in the environment and that will take precedence over this configuration file. Some subcommands allow some of these to be overridden by flags. These take precedence over both environment variables and this configuration file.",
+
+    "#": "AWS region name (e.g. \"us-west-2\"). If this is specified and PANBOTICON_AZ is not, a random availability zone within the region will be chosen when needed. If this is not specified and PANBOTICON_AZ is, this is inferred from PANBOTICON_AZ.",
+    "PANBOTICON_REGION": "",
+
+    "#": "AWS availability zone name (e.g. \"us-west-2b\") or ID (e.g. \"usw1-az3\"). If this is specified and PANBOTICON_REGION is also specified, they must agree. If this is specified and PANBOTICON_REGION is not, PANBOTICON_REGION is inferred from this.",
+    "PANBOTICON_AZ": "",
+
+    "#": "AWS VPC ID where Panboticon instances are launched.",
+    "PANBOTICON_VPC_ID": "",
+
+    "#": "AWS subnet ID where Panboticon instances are launched. If this is specified, it must be in PANBOTICON_VPC_ID. If this is not specified, a suitable subnet in PANBOTICON_VPC_ID and PANBOTICON_AZ is chosen.",
+    "PANBOTICON_SUBNET_ID": "",
+
+    "#": "AWS IAM instance profile for Panboticon instances. This is how you'll give your Panboticon instance access to use AWS APIs.",
+    "PANBOTICON_IAM_INSTANCE_PROFILE": "",
+
+    "#": "AWD EC2 instance type for Panboticon instances.",
+    "PANBOTICON_INSTANCE_TYPE": "",
+
+    "#": "Usernames for the human and bot users.",
+    "PANBOTICON_HUMAN_USER": "",
+    "PANBOTICON_BOT_USER": "",
+
+    "#": "Email addresses for the human and bot users, which will be configured in ~/.gitconfig as the author of commits.",
+    "PANBOTICON_HUMAN_EMAIL": "",
+    "PANBOTICON_BOT_EMAIL": "",
+
+    "#": "Login shells to assign to the human and bot users.",
+    "PANBOTICON_HUMAN_SHELL": "/bin/zsh",
+    "PANBOTICON_BOT_SHELL": "/bin/bash",
+
+    "#": "Paths to shell programs containing additional bootstrapping commands for human and bot users. These will be executed interactively while launching instances to facilitate e.g. OAuth flows.",
+    "PANBOTICON_HUMAN_BOOTSTRAP": "",
+    "PANBOTICON_BOT_BOOTSTRAP": "",
+
+    "#": "This comment allows all the lines above to have trailing commas."
+}

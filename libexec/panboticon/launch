@@ -1,0 +1,218 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon launch [-p \e[4minstance-profile\e[0m] [-r \e[4mregion\e[0m] [-s \e[4msubnet-id\e[0m] [-t \e[4minstance-type\e[0m] [-v \e[4mvpc-id\e[0m] [-z \e[4mavailability-zone-name-or-id\e[0m] [\e[4mname\e[0m]\n" >&2
+    printf "  -p \e[4minstance-profile\e[0m              AWS IAM instance profile for this Panboticon instance\n" >&2
+    printf "  -r \e[4mregion\e[0m                        AWS region (required if not specified in $PANBOTICON_CONFIG or the environment and -z not given)\n" >&2
+    printf "  -s \e[4msubnet-id\e[0m                     AWS VPC subnet ID where this Panboticon instance should be launched\n" >&2
+    printf "  -t \e[4minstance-type\e[0m                 AWS EC2 instance type for this Panboticon instance (required if not specified in $PANBOTICON_CONFIG or the environment)\n" >&2
+    printf "  -v \e[4mvpc-id\e[0m                        AWS VPC ID where this Panboticon instance should be launched (required if not specified in $PANBOTICON_CONFIG or the environment)\n" >&2
+    printf "  -z \e[4mavailability-zone-name-or-id\e[0m  AWS availability zone name or ID (required if not specified in $PANBOTICON_CONFIG or the environment and -r not given)\n" >&2
+    printf "  \e[4mname\e[0m                             Name tag for the AWS EC2 instance (defaults to \"$USER-panboticon-\$(date +\"%%Y%%m%%d%%H%%M\")\")\n" >&2
+    exit "$1"
+}
+
+NAME="$USER-panboticon-$(date +"%Y%m%d%H%M")"
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-p"|"--instance-profile") PANBOTICON_INSTANCE_PROFILE="$2" shift 2;;
+        "-p"*) PANBOTICON_INSTANCE_PROFILE="$(echo "$1" | cut -c"3-")" shift;;
+        "--profile="*|"--instance-profile="*) PANBOTICON_INSTANCE_PROFILE="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-r"|"--region") PANBOTICON_REGION="$2" shift 2;;
+        "-r"*) PANBOTICON_REGION="$(echo "$1" | cut -c"3-")" shift;;
+        "--region="*) PANBOTICON_REGION="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-s"|"--subnet"|"--subnet-id") PANBOTICON_SUBNET_ID="$2" shift 2;;
+        "-s"*) PANBOTICON_SUBNET_ID="$(echo "$1" | cut -c"3-")" shift;;
+        "--subnet="*|"--subnet-id="*) PANBOTICON_SUBNET_ID="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-t"|"--type"|"--instance-type") PANBOTICON_INSTANCE_TYPE="$2" shift 2;;
+        "-t"*) PANBOTICON_INSTANCE_TYPE="$(echo "$1" | cut -c"3-")" shift;;
+        "--type="*|"--instance-type="*) PANBOTICON_INSTANCE_TYPE="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-v"|"--vpc"|"--vpc-id") PANBOTICON_VPC_ID="$2" shift 2;;
+        "-v"*) PANBOTICON_VPC_ID="$(echo "$1" | cut -c"3-")" shift;;
+        "--vpc="*|"--vpc-id="*) PANBOTICON_VPC_ID="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-z"|"--zone"|"--az"|"--availability-zone") PANBOTICON_AZ="$2" shift 2;;
+        "-z"*) PANBOTICON_AZ="$(echo "$1" | cut -c"3-")" shift;;
+        "--zone="*|"--az="*|"--availability-zone="*) PANBOTICON_AZ="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+if [ "$1" ]
+then NAME="$1" shift
+fi
+if [ "$1" ]
+then usage 1
+fi
+
+. "$PANBOTICON_LIB/aws.sh"
+aws_vpc_subnet
+
+printf "Selecting the right AMI ..." >&2
+AWS_ARCH="x86_64" UBUNTU_ARCH="amd64"
+if echo "$PANBOTICON_INSTANCE_TYPE" | cut -d"." -f"1" | grep -q "g"
+then AWS_ARCH="arm64" UBUNTU_ARCH="arm64"
+fi
+UBUNTU_VERSION="24.04" # XXX PlanetScale still mostly uses 24.04 but 26.04 is out
+IMAGE_ID="$(
+    aws ec2 describe-images \
+        --filters \
+            Name="architecture",Values="$AWS_ARCH" \
+            Name="name",Values="ubuntu/images/hvm-ssd*/ubuntu-*-$UBUNTU_VERSION-$UBUNTU_ARCH-server-*" \
+            Name="state",Values="available" \
+            Name="virtualization-type",Values="hvm" \
+        --owners "099720109477" |
+    jq -e -r '.Images | sort_by(.CreationDate) | last | .ImageId'
+)"
+[ "$IMAGE_ID" ]
+echo " Done! AMI: $IMAGE_ID" >&2
+
+PANBOTICON_INSTANCE_PROFILE="rcrowley" # XXX <https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/roles/details/rcrowley?section=permissions>
+
+printf "Finding or creating the Panboticon security group ..." >&2
+SECURITY_GROUP_ID="$(
+    aws ec2 create-security-group \
+        --description "Panboticon" \
+        --group-name "panboticon" \
+        --vpc-id "$PANBOTICON_VPC_ID" 2>"/dev/null" |
+    jq -e -r '.GroupId' ||
+    aws ec2 describe-security-groups --filters \
+        Name="group-name",Values="panboticon" \
+        Name="vpc-id",Values="$PANBOTICON_VPC_ID" |
+    jq -e -r '.SecurityGroups[].GroupId'
+)"
+[ "$SECURITY_GROUP_ID" ]
+aws_duplicates_ok ec2 authorize-security-group-ingress \
+    --cidr "0.0.0.0/0" \
+    --group-id "$SECURITY_GROUP_ID" \
+    --output "off" \
+    --port 22 \
+    --protocol "tcp"
+aws_duplicates_ok ec2 authorize-security-group-egress \
+    --cidr "0.0.0.0/0" \
+    --group-id "$SECURITY_GROUP_ID" \
+    --output "off" \
+    --port "0-65535" \
+    --protocol "all"
+echo " Done! Security group ID: $SECURITY_GROUP_ID" >&2
+
+printf "Launching the Panboticon instance ..." >&2
+KEY_NAME="rcrowley-rsa" # XXX delete once the user-data.sh is very solid
+ssh-add -L >"$TMP/authorized_keys"
+if [ ! -s "$TMP/authorized_keys" ]
+then
+    echo "No public keys found in the SSH agent. Run \`ssh-add\` to populate the agent so Panboticon knows who to authorize for SSH login." >&2
+    exit 1
+fi
+cat >"$TMP/user-data.sh" <<USER_DATA_EOF
+#!/bin/sh
+
+set -e -x
+
+cp "\$0" "/root/user-data.sh" # save a copy for debugging
+
+hostname "$NAME"
+echo "$NAME" >"/etc/hostname"
+
+until sudo apt-get update
+do :
+done
+until sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "$(basename "$PANBOTICON_HUMAN_SHELL")" "$(basename "$PANBOTICON_BOT_SHELL")" "auditd" "audispd-plugins"
+do :
+done
+
+cat >"/etc/audit/auditd.conf" <<EOF
+admin_space_left_action = HALT
+log_file = /var/log/audit/audit.log
+log_format = ENRICHED
+max_log_file = 100             # MB per log file
+max_log_file_action = ROTATE
+num_logs = 5                   # keep 5 rotated logs
+space_left_action = SYSLOG
+EOF
+cat >"/etc/audit/rules.d/panboticon.rules" <<EOF
+-a always,exit -F arch=b32 -S accept,accept4,connect,execve,listen
+-a always,exit -F arch=b64 -S accept,accept4,connect,execve,listen
+-e 2
+EOF
+sudo systemctl enable "auditd"
+sudo systemctl start "auditd"
+sudo augenrules --load
+sudo auditctl -l
+sudo auditctl -s
+
+groupadd -g 1234 "$PANBOTICON_HUMAN_USER"
+groupadd -g 10101 "$PANBOTICON_BOT_USER"
+
+useradd -G adm,sudo,10101 -d "/home/$PANBOTICON_HUMAN_USER" -g 1234 -m -s "$PANBOTICON_HUMAN_SHELL" -u 1234 "$PANBOTICON_HUMAN_USER"
+useradd -d "/home/$PANBOTICON_BOT_USER" -g 10101 -m -s "$PANBOTICON_BOT_SHELL" -u 10101 "$PANBOTICON_BOT_USER"
+
+sed -E -i 's/^UMASK(\\t+)022$/UMASK\\1002/' "/etc/login.defs"
+sed -E -i 's/^# auth       sufficient pam_wheel.so trust$/auth       sufficient pam_wheel.so group=sudo trust/' "/etc/pam.d/su"
+echo "$PANBOTICON_HUMAN_USER ALL=(ALL) NOPASSWD:ALL" >"/etc/sudoers.d/$PANBOTICON_HUMAN_USER"
+
+install -d -m 0700 "/root/.ssh"
+cat >"/root/.ssh/authorized_keys" <<EOF
+$(cat "$TMP/authorized_keys")
+EOF
+install -d -g "$PANBOTICON_HUMAN_USER" -m 0700 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.ssh"
+install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.ssh"
+install -g "$PANBOTICON_HUMAN_USER" -m 0600 -o "$PANBOTICON_HUMAN_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_HUMAN_USER/.ssh"
+install -g "$PANBOTICON_BOT_USER" -m 0640 -o "$PANBOTICON_BOT_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_BOT_USER/.ssh" 
+chattr +i "/home/$PANBOTICON_BOT_USER/.ssh/authorized_keys"
+USER_DATA_EOF
+INSTANCE_ID="$(
+    aws ec2 run-instances \
+        --associate-public-ip-address \
+        --block-device-mappings Ebs=\{VolumeSize=100\},DeviceName="/dev/sda1" \
+        --image-id "$IMAGE_ID" \
+        --key-name "$KEY_NAME" \
+        --iam-instance-profile Name="$PANBOTICON_INSTANCE_PROFILE" \
+        --instance-type "$PANBOTICON_INSTANCE_TYPE" \
+        --security-group-ids "$SECURITY_GROUP_ID" \
+        --subnet-id "$PANBOTICON_SUBNET_ID" \
+        --tag-specifications ResourceType="instance",Tags=\[\{Key="Manager",Value="Panboticon"\},\{Key="Name",Value="$NAME"\}\] \
+        --user-data "$(cat "$TMP/user-data.sh")" |
+    jq -e -r '.Instances[].InstanceId'
+)"
+printf " $INSTANCE_ID ..." >&2
+while sleep 2
+do
+    printf "." >&2
+    PUBLIC_IP_ADDRESS="$(
+        aws ec2 describe-instances --filters \
+            Name="instance-id",Values="$INSTANCE_ID" |
+        jq -r '.Reservations[].Instances[].PublicIpAddress'
+    )"
+    if [ "$PUBLIC_IP_ADDRESS" ]
+    then break
+    fi
+done
+cat >"$HOME/.ssh/$NAME.ssh_config" <<EOF
+Host $NAME
+    # $INSTANCE_ID
+    Hostname $PUBLIC_IP_ADDRESS
+EOF
+printf " $PUBLIC_IP_ADDRESS / $NAME ..." >&2
+until ssh -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$PUBLIC_IP_ADDRESS" : >"/dev/null" 2>&1
+do
+    sleep 2
+    printf "." >&2
+done
+echo " Done! Login: \`ssh $NAME\`" >&2
+
+bootstrap "$NAME"

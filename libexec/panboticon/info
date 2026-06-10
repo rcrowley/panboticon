@@ -1,0 +1,58 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon info \e[4mname\e[0m\n" >&2
+    printf "  \e[4mname\e[0m  name of the Panboticon instance to print info about\n" >&2
+    exit "$1"
+}
+
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+if [ -z "$1" ]
+then
+    boxen >"$TMP/boxen.txt"
+    if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
+    then exec info "$(cat "$TMP/boxen.txt")"
+    else usage 1
+    fi
+fi
+NAME="$1"
+
+. "$PANBOTICON_LIB/aws.sh"
+
+aws ec2 describe-instances --filters \
+    Name="instance-state-name",Values="running" \
+    Name="tag:Manager",Values="Panboticon" \
+    Name="tag:Name",Values="$NAME" |
+jq -e '[.Reservations[].Instances[]] | .[0]' >"$TMP/instance.json"
+
+INSTANCE_ID="$(jq -e -r '.InstanceId' <"$TMP/instance.json")"
+PUBLIC_IP="$(jq -e -r '.PublicIpAddress' <"$TMP/instance.json")"
+AZ="$(jq -e -r '.Placement.AvailabilityZone' <"$TMP/instance.json")"
+
+echo "Name: $NAME"
+echo "Instance ID: $INSTANCE_ID"
+echo "Public IP address: $PUBLIC_IP"
+echo "Availability Zone: $AZ"
+
+echo
+ssh "$PANBOTICON_HUMAN_USER@$NAME" df -h "/"
+
+echo
+ssh "$PANBOTICON_HUMAN_USER@$NAME" ps -o "user,pid,tty,time,comm" -u "$PANBOTICON_HUMAN_USER" || echo "(none)"
+
+echo
+ssh "$PANBOTICON_HUMAN_USER@$NAME" ps -o "user,pid,tty,time,comm" -u "$PANBOTICON_BOT_USER" || echo "(none)"
