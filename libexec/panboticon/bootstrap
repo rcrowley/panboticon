@@ -66,7 +66,9 @@ do
     ssh "$NAME" sh -c "test -x ~/.local/bin/claude || curl -fsSL https://claude.ai/install.sh | bash"
     ssh -b "$NAME" sh -c "test -x ~/.local/bin/claude || curl -fsSL https://claude.ai/install.sh | bash"
 
-    # TODO Install and configure Codex, too.
+    # Install and configure Codex.
+    ssh "$NAME" curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
+    ssh "$NAME" sudo npm install -g "@openai/codex"
 
     # Run additional configured bootstrapping programs for both human and bot.
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
