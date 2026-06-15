@@ -3,16 +3,22 @@
 set -e
 
 usage() {
-    printf "Usage: panboticon config\n" >&2
+    printf "Usage: panboticon config [-f \e[4mformat\e[0m]\n" >&2
+    printf "  -f \e[4mformat\e[0m  output format (one of \"env\", \"json\"; defaults to \"env\")\n" >&2
     exit "$1"
 }
 
+FORMAT="env"
 if [ "$(basename "$0")" = "$1" ]
 then shift
 fi
 while [ "$#" -gt 0 ]
 do
     case "$1" in
+
+        "-f"|"--format") FORMAT="$2" shift 2;;
+        "-f"*) FORMAT="$(echo "$1" | cut -c"3-")" shift;;
+        "--format="*) FORMAT="$(echo "$1" | cut -d"=" -f"2-")" shift;;
 
         "-h"|"--help") usage 0;;
 
@@ -24,4 +30,9 @@ if [ "$1" ]
 then usage 1
 fi
 
-env | grep "^PANBOTICON_" | sort
+env | grep "^PANBOTICON_" | sort |
+case "$FORMAT" in
+    "env") exec cat;;
+    "json") exec jq -R -s 'split("\n") | map(select(length > 0) | split("=") | {(.[0]): (.[1:] | join("="))}) | add';;
+    *) usage 1;;
+esac
