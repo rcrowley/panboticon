@@ -44,6 +44,14 @@ grep -E "^: \\\$\\{PANBOTICON_[_A-Z]+:=\"[-./_~@0-9A-Za-z]*\"\\}\$" >"$TMP/confi
 . "$TMP/config.sh"
 . "$TMP/export.sh"
 
+PANBOTICON_AWS_ARCH="x86_64" PANBOTICON_NODEJS_ARCH="x64" PANBOTICON_UBUNTU_ARCH="amd64"
+if echo "$PANBOTICON_INSTANCE_TYPE" | cut -d"." -f"1" | grep -q "[0-9]g"
+then PANBOTICON_AWS_ARCH="arm64" PANBOTICON_NODEJS_ARCH="arm64" PANBOTICON_UBUNTU_ARCH="arm64"
+fi
+export PANBOTICON_AWS_ARCH PANBOTICON_NODEJS_ARCH PANBOTICON_UBUNTU_ARCH
+
+export PANBOTICON_UBUNTU_VERSION="24.04" # XXX PlanetScale still mostly uses 24.04 but 26.04 is out
+
 case "$PANBOTICON_HUMAN_BOOTSTRAP" in
     "") ;;
     "~") PANBOTICON_HUMAN_BOOTSTRAP="";;
