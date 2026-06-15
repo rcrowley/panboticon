@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon config\n" >&2
+    exit "$1"
+}
+
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+if [ "$1" ]
+then usage 1
+fi
+
+env | grep "^PANBOTICON_" | sort
