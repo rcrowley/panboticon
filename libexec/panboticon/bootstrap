@@ -63,8 +63,8 @@ do
     # Until <https://github.com/anthropics/claude-code/issues/21570>, we'll
     # have to settle for installing Claude Code once per user as directed by
     # <https://claude.com/product/claude-code>.
-    ssh "$NAME" test -x "\$HOME/.local/bin/claude" \|\| curl -fsSL https://claude.ai/install.sh \| bash
-    ssh -b "$NAME" test -x "\$HOME/.local/bin/claude" \|\| curl -fsSL https://claude.ai/install.sh \| bash
+    ssh "$NAME" "\$HOME/.local/bin/claude" upgrade \|\| curl -fsSL https://claude.ai/install.sh \| bash
+    ssh -b "$NAME" "\$HOME/.local/bin/claude" upgrade \|\| curl -fsSL https://claude.ai/install.sh \| bash
 
     # Install and configure Codex.
     ssh "$NAME" curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
