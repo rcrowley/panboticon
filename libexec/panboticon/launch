@@ -160,6 +160,8 @@ sed -E -i 's/^UMASK(\\t+)022$/UMASK\\1002/' "/etc/login.defs"
 sed -E -i 's/^# auth       sufficient pam_wheel.so trust$/auth       sufficient pam_wheel.so group=sudo trust/' "/etc/pam.d/su"
 echo "$PANBOTICON_HUMAN_USER ALL=(ALL) NOPASSWD:ALL" >"/etc/sudoers.d/$PANBOTICON_HUMAN_USER"
 
+echo "StreamLocalBindUnlink yes" >"/etc/ssh/sshd_config.d/panboticon.conf"
+systemctl restart "ssh"
 install -d -m 0700 "/root/.ssh"
 cat >"/root/.ssh/authorized_keys" <<EOF
 $(cat "$TMP/authorized_keys")
@@ -197,10 +199,15 @@ do
     then break
     fi
 done
+mkdir -m"0700" -p "$HOME/.ssh/control"
 cat >"$HOME/.ssh/$NAME.ssh_config" <<EOF
 Host $NAME
     # $INSTANCE_ID
+    ControlMaster auto
+    ControlPath ~/.ssh/control/%C.sock
+    ControlPersist 12h
     Hostname $PUBLIC_IP_ADDRESS
+    RemoteForward /home/%r/.opener.sock:%d/.opener.sock
 EOF
 printf " $PUBLIC_IP_ADDRESS / $NAME ..." >&2
 until ssh -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$PUBLIC_IP_ADDRESS" : >"/dev/null" 2>&1

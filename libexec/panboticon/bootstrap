@@ -25,6 +25,43 @@ if [ -z "$1" ]
 then usage 1
 fi
 
+# Install the local opener service (from rcrowley's fork of opener to get the
+# directory-of-control-sockets variant of jomiller's auto-forwarding patch) to
+# catch URLs from the remote xdg-open stand-in.
+echo "Installing opener locally to open browser windows for OAuth flows on Panboticon instances ..." >&2
+if ! which "opener" >"/dev/null"
+then
+    if [ -d "$HOME/var/cache/opener" ]
+    then git -C "$HOME/var/cache/opener" pull "origin" "$(git -C "$HOME/var/cache/opener" branch --show-current)"
+    else git clone -b "multiple-control-sockets" "https://github.com/rcrowley/opener.git" "$HOME/var/cache/opener"
+    fi
+    (cd "$HOME/var/cache/opener" && go install) # TODO drop the local Go toolchain requirement
+fi
+which "opener"
+mkdir -p "$HOME/Library/LaunchAgents"
+cat >"$HOME/Library/LaunchAgents/opener.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key><string>opener</string>
+        <key>ProgramArguments</key><array><string>/Users/rcrowley/bin/opener</string></array>
+        <key>KeepAlive</key><true/>
+        <key>StandardOutPath</key><string>/dev/null</string>
+        <key>StandardErrorPath</key><string>/dev/null</string>
+    </dict>
+</plist>
+EOF
+launchctl unload "$HOME/Library/LaunchAgents/opener.plist" || :
+launchctl load "$HOME/Library/LaunchAgents/opener.plist"
+mkdir -p "$HOME/.config/opener"
+cat >"$HOME/.config/opener/config.yaml" <<EOF
+auto-forward-control-socket-directory: ~/.ssh/control
+auto-forward-ttl: 60s
+EOF
+echo "... Done!" >&2
+
+# Bootstrap each Panboticon instance given as an argument.
 while [ "$#" -gt 0 ]
 do
     NAME="$1" shift
@@ -37,11 +74,24 @@ do
 
     # Install gh, iptables-persistent, screen, and tmux - almost everything we
     # need to let the bot run wild in its cell.
-    ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "screen" "tmux"
+    ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "netcat-openbsd" "screen" "tmux"
 
     # Deny access to the EC2 IMDS before any human or bot user code runs.
     ssh "$NAME" sudo iptables -I OUTPUT -d "169.254.169.254/32" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
     ssh "$NAME" sudo ip6tables -I OUTPUT -d "fd00:ec2::254/128" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+
+    # Wire up the ability to open browser tabs on the human user's laptop from
+    # inside a Panboticon instance.
+    ssh "$NAME" sudo tee "/usr/local/bin/xdg-open" >"/dev/null" <<'EOF'
+#!/bin/sh
+set -e
+if [ "$1" ]
+then echo "$@"
+else cat
+fi | nc -U "$HOME/.opener.sock"
+EOF
+    ssh "$NAME" sudo chmod +x "/usr/local/bin/xdg-open"
+    ssh "$NAME" sudo ln -f -s "xdg-open" "/usr/local/bin/open"
 
     # Authenticate both the human and the bot with GitHub. These boxen are
     # after all also usable by the human as regular development machines.
