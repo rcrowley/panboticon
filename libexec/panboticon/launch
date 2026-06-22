@@ -76,8 +76,6 @@ IMAGE_ID="$(
 [ "$IMAGE_ID" ]
 echo " Done! AMI: $IMAGE_ID" >&2
 
-PANBOTICON_INSTANCE_PROFILE="rcrowley" # XXX <https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/roles/details/rcrowley?section=permissions>
-
 printf "Finding or creating the Panboticon security group ..." >&2
 SECURITY_GROUP_ID="$(
     aws ec2 create-security-group \
