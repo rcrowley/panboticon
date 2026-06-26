@@ -47,8 +47,8 @@ cat >"$HOME/Library/LaunchAgents/opener.plist" <<EOF
         <key>Label</key><string>opener</string>
         <key>ProgramArguments</key><array><string>/Users/rcrowley/bin/opener</string></array>
         <key>KeepAlive</key><true/>
-        <key>StandardOutPath</key><string>/dev/null</string>
-        <key>StandardErrorPath</key><string>/dev/null</string>
+        <key>StandardOutPath</key><string>/var/log/opener.log</string>
+        <key>StandardErrorPath</key><string>/var/log/opener.log</string>
     </dict>
 </plist>
 EOF
