@@ -124,7 +124,9 @@ EOF
     ssh "$NAME" "\$HOME/.local/bin/agent" update \|\| curl -S -f -s "https://cursor.com/install" \| bash
     ssh -b "$NAME" "\$HOME/.local/bin/agent" update \|\| curl -S -f -s "https://cursor.com/install" \| bash
 
-    # TODO Install and configure OpenCode.
+    # Install and configure OpenCode.
+    ssh "$NAME" "\$HOME/.local/bin/opencode" update \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash
+    ssh -b "$NAME" "\$HOME/.local/bin/opencode" update \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash
 
     # TODO Install and configure Pi.
 
