@@ -77,8 +77,12 @@ do
     ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "netcat-openbsd" "screen" "tmux"
 
     # Deny access to the EC2 IMDS before any human or bot user code runs.
-    ssh "$NAME" sudo iptables -I OUTPUT -d "169.254.169.254/32" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
-    ssh "$NAME" sudo ip6tables -I OUTPUT -d "fd00:ec2::254/128" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+    if ! ssh "$NAME" sudo iptables-save | grep -F -e "-A OUTPUT -d 169.254.169.254/32 -m owner --uid-owner 10101 -j REJECT" -q
+    then ssh "$NAME" sudo iptables -I OUTPUT -d "169.254.169.254/32" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+    fi
+    if ! ssh "$NAME" sudo ip6tables-save | grep -F -e "-A OUTPUT -d fd00:ec2::254/128 -m owner --uid-owner 10101 -j REJECT" -q
+    then ssh "$NAME" sudo ip6tables -I OUTPUT -d "fd00:ec2::254/128" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+    fi
 
     # Wire up the ability to open browser tabs on the human user's laptop from
     # inside a Panboticon instance.
