@@ -38,8 +38,22 @@ fi
 
 while [ "$#" -gt 0 ]
 do
+
     if [ -z "$FORCE" ]
     then
+        DIFF_HUMAN=0 DIFF_BOT=0
+        if ! ssh "$1" find "/home/$PANBOTICON_HUMAN_USER" -name ".git" \| xargs dirname \| xargs -I _ sh -c \''cd _ && pwd && git diff --color --exit-code --stat && git diff --cached --color --exit-code --stat'\'
+        then DIFF_HUMAN=1
+        fi
+        if ! ssh -b "$1" find "/home/$PANBOTICON_BOT_USER" -name ".git" \| xargs dirname \| xargs -I _ sh -c \''cd _ && pwd && git diff --color --exit-code --stat && git diff --cached --color --exit-code --stat'\'
+        then DIFF_BOT=1
+        fi
+        if [ "$DIFF_HUMAN" = 1 ]
+        then echo "There are uncommitted changes in Git repositories in ~$PANBOTICON_HUMAN_USER." >&2
+        fi
+        if [ "$DIFF_BOT" = 1 ]
+        then echo "There are uncommitted changes in Git repositories in ~$PANBOTICON_BOT_USER." >&2
+        fi
         printf "Are you sure you want to terminate $1? There is no undo. [yn] " >&2
         read YESNO
         case "$YESNO" in
