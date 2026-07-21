@@ -132,7 +132,9 @@ EOF
     ssh "$NAME" "\$HOME/.opencode/bin/opencode" update \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" update \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
 
-    # TODO Install and configure Pi.
+    # Install and configure Pi.
+    ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
+    ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
 
     # Run additional configured bootstrapping programs for both human and bot.
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
