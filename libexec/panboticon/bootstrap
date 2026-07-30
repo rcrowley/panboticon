@@ -62,14 +62,25 @@ EOF
 echo "... Done!" >&2
 
 # Bootstrap each Panboticon instance given as an argument.
+STATUS=0
 while [ "$#" -gt 0 ]
 do
     NAME="$1" shift
     if [ ! -f "$HOME/.ssh/$NAME.ssh_config" ]
     then
         echo "Could not find Panboticon instance $NAME to bootstrap." >&2
+        STATUS=1
         continue
     fi
+
+    GITHUB_APP_ID="$(curl -s "https://api.github.com/users/$PANBOTICON_BOT_USER%5Bbot%5D" | jq -e -r '.id')"
+    if [ -z "$GITHUB_APP_ID" ]
+    then
+        echo "Could not find the GitHub App $PANBOTICON_BOT_USER to configure bot GitHub access." >&2
+        STATUS=1
+        continue
+    fi
+
     echo "Bootstrapping Panboticon instance $NAME ..." >&2
 
     # Install gh, iptables-persistent, screen, and tmux - almost everything we
@@ -105,10 +116,28 @@ EOF
     ssh "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
     ssh "$NAME" git config --global "user.email" "$PANBOTICON_HUMAN_EMAIL"
     echo >&2
-    echo "Running \`gh auth login\` for the bot user, $PANBOTICON_BOT_USER. " >&2
-    ssh -b "$NAME" gh auth status \|\| gh auth login
-    ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
-    ssh -b "$NAME" git config --global "user.email" "$PANBOTICON_BOT_EMAIL"
+    echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot]. " >&2
+    ssh -b "$NAME" mkdir -p "/home/$PANBOTICON_BOT_USER/bin" "/home/$PANBOTICON_BOT_USER/.panboticon"
+    scp "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
+    echo "$PANBOTICON_BOT_GITHUB_APP_ID" | ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_id.txt" >"/dev/null"
+    echo "$PANBOTICON_BOT_GITHUB_APP_INSTALLATION_ID" | ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_installation_id.txt" >"/dev/null"
+    ssh -b "$NAME" touch "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"
+    ssh -b "$NAME" chmod 600 "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"
+    if [ -f "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" ]
+    then scp "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$PANBOTICON_BOT_USER@$NAME:.panboticon/github_app_private_key.pem"
+    elif echo "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" | grep -q "^op://"
+    then op read "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" | ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem" >"/dev/null"
+    else
+        echo "Could not find the GitHub App private key $PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY. The bot user will not have GitHub access yet." >&2
+        STATUS=1
+    fi
+    ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!'"/home/$PANBOTICON_BOT_USER/bin/panboticon-git-credential'"
+    ssh -b "$NAME" git config --global "credential.https://github.com.username" "x-access-token"
+    ssh -b "$NAME" git config --global "init.defaultBranch" "main"
+    ssh -b "$NAME" git config --global --replace-all "url.https://github.com/.insteadOf" "git@github.com:"
+    ssh -b "$NAME" git config --add --global "url.https://github.com/.insteadOf" "ssh://git@github.com/"
+    ssh -b "$NAME" git config --global "user.email" "$GITHUB_APP_ID+$PANBOTICON_BOT_USER\[bot\]@users.noreply.github.com"
+    ssh -b "$NAME" git config --global "user.name" "$PANBOTICON_BOT_USER\[bot\]"
     echo >&2
     echo "... Done!" >&2
 
@@ -178,3 +207,4 @@ EOF
 
     echo "... Done!" >&2
 done
+exit "$STATUS"
