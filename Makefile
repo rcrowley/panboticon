@@ -5,7 +5,7 @@ export PANBOTICON_LIBEXEC = libexec/panboticon
 
 prefix = /usr/local
 
-all: lib/panboticon/availability-zones.txt
+all:
 
 clean:
 
