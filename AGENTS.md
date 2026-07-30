@@ -2,4 +2,4 @@ Panboticon is a command-line tool organized into subcommands. It runs on its use
 
 The main entrypoint is `bin/panboticon`. It dispatches to subcommands in `libexec/panboticon`. Reusable files and functions are defined in `lib/panboticon`.
 
-Panboticon is implemented in POSIX shell. Use my rules for shell programs from `~/.claude/CLAUDE.md`.
+Panboticon is implemented in POSIX shell. Use my rules for shell programs from `~/.pi/agent/AGENTS.md`.
