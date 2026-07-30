@@ -132,9 +132,9 @@ cat >"/etc/audit/auditd.conf" <<EOF
 admin_space_left_action = HALT
 log_file = /var/log/audit/audit.log
 log_format = ENRICHED
-max_log_file = 100             # MB per log file
+max_log_file = 100
 max_log_file_action = ROTATE
-num_logs = 5                   # keep 5 rotated logs
+num_logs = 5
 space_left_action = SYSLOG
 EOF
 cat >"/etc/audit/rules.d/panboticon.rules" <<EOF
