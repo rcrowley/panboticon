@@ -23,7 +23,7 @@ From a Git work tree (say, if you're going to work on Panboticon itself):
 
     export PATH="/path-to-panboticon-work-tree/bin:$PATH"
 
-While not strictly necessary to install Panboticon, there are a couple of prerequisites without which you won't make it very far using Panboticon:
+While not strictly necessary to install Panboticon, there are two prerequisites without which you won't make it very far using Panboticon:
 
 * AWS CLI:
     * Functioning `aws sso login` command.
