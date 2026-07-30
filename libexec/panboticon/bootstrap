@@ -118,6 +118,7 @@ EOF
     echo >&2
     echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot]. " >&2
     ssh -b "$NAME" mkdir -p "/home/$PANBOTICON_BOT_USER/bin" "/home/$PANBOTICON_BOT_USER/.panboticon"
+    scp "$PANBOTICON_LIB/gh" "$PANBOTICON_BOT_USER@$NAME:bin/gh"
     scp "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
     ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_id.txt" >"/dev/null"

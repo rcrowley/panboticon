@@ -1,0 +1,248 @@
+#!/bin/sh
+
+set -e
+
+TOKEN=""
+
+get_token() {
+    if [ -z "$TOKEN" ]
+    then
+        TOKEN="$(printf 'protocol=https\nhost=github.com\n\n' | git credential fill 2>/dev/null | sed -n 's/^password=//p')"
+    fi
+}
+
+api() {
+    _method="$1"; _path="$2"; _body="$3"
+    get_token
+    if [ -n "$_body" ]
+    then
+        curl -s -X "$_method" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -d "$_body" \
+            "https://api.github.com$_path"
+    else
+        curl -s -X "$_method" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com$_path"
+    fi
+}
+
+cmd_repo() {
+    case "${1:-}" in
+        create) shift; cmd_repo_create "$@";;
+        *) exit 22;;
+    esac
+}
+
+cmd_repo_create() {
+    _visibility=""
+    _name=""
+    while [ $# -gt 0 ]
+    do
+        case "$1" in
+            --private)
+                [ "$_visibility" != "public" ] || exit 22
+                _visibility=private
+                shift;;
+            --public)
+                [ "$_visibility" != "private" ] || exit 22
+                _visibility=public
+                shift;;
+            --*) exit 22;;
+            -*) exit 22;;
+            *)
+                [ -z "$_name" ] || exit 22
+                _name="$1"
+                shift;;
+        esac
+    done
+
+    [ -n "$_visibility" ] || exit 22
+    [ -n "$_name" ] || exit 22
+
+    if [ "$_visibility" = "private" ]
+    then _private=true
+    else _private=false
+    fi
+
+    case "$_name" in
+        */*)
+            _owner="${_name%%/*}"
+            _repo="${_name#*/}"
+            _json="$(jq -n --arg name "$_repo" --argjson private "$_private" '{"name":$name,"private":$private}')"
+            _response="$(api POST "/orgs/$_owner/repos" "$_json")"
+            ;;
+        *)
+            _json="$(jq -n --arg name "$_name" --argjson private "$_private" '{"name":$name,"private":$private}')"
+            _response="$(api POST /user/repos "$_json")"
+            ;;
+    esac
+
+    _url="$(printf '%s' "$_response" | jq -r '.html_url // empty')"
+    if [ -z "$_url" ]
+    then
+        _message="$(printf '%s' "$_response" | jq -r '.message // "unknown error"')"
+        printf 'could not create repository: %s\n' "$_message" >&2
+        exit 1
+    fi
+    printf '%s\n' "$_url"
+}
+
+cmd_pr() {
+    case "${1:-}" in
+        create) shift; cmd_pr_create "$@";;
+        *) exit 22;;
+    esac
+}
+
+cmd_pr_create() {
+    _fill=false
+    _draft=false
+    _title=""
+    _title_set=false
+    _body=""
+    _body_set=false
+    _body_file=""
+    _body_file_set=false
+
+    while [ $# -gt 0 ]
+    do
+        case "$1" in
+            --body)
+                [ $# -ge 2 ] || exit 22
+                _body="$2"; _body_set=true; shift 2;;
+            --body=*) _body="${1#--body=}"; _body_set=true; shift;;
+            -b)
+                [ $# -ge 2 ] || exit 22
+                _body="$2"; _body_set=true; shift 2;;
+            -b*) _body="${1#-b}"; _body_set=true; shift;;
+            --body-file)
+                [ $# -ge 2 ] || exit 22
+                _body_file="$2"; _body_file_set=true; shift 2;;
+            --body-file=*) _body_file="${1#--body-file=}"; _body_file_set=true; shift;;
+            -F)
+                [ $# -ge 2 ] || exit 22
+                _body_file="$2"; _body_file_set=true; shift 2;;
+            -F*) _body_file="${1#-F}"; _body_file_set=true; shift;;
+            --draft) _draft=true; shift;;
+            -d) _draft=true; shift;;
+            --fill) _fill=true; shift;;
+            -f) _fill=true; shift;;
+            --title)
+                [ $# -ge 2 ] || exit 22
+                _title="$2"; _title_set=true; shift 2;;
+            --title=*) _title="${1#--title=}"; _title_set=true; shift;;
+            -t)
+                [ $# -ge 2 ] || exit 22
+                _title="$2"; _title_set=true; shift 2;;
+            -t*) _title="${1#-t}"; _title_set=true; shift;;
+            *) exit 22;;
+        esac
+    done
+
+    # Non-interactive: need at least --fill or --title
+    if ! $_fill && ! $_title_set
+    then exit 22
+    fi
+
+    # Determine repository from git remote
+    if ! _remote_url="$(git remote get-url origin 2>/dev/null)"
+    then
+        printf 'could not determine repository: not in a git repository or no origin remote\n' >&2
+        exit 1
+    fi
+    _remote_url="${_remote_url%.git}"
+    case "$_remote_url" in
+        https://github.com/*) _owner_repo="${_remote_url#https://github.com/}";;
+        git@github.com:*) _owner_repo="${_remote_url#git@github.com:}";;
+        ssh://git@github.com/*) _owner_repo="${_remote_url#ssh://git@github.com/}";;
+        *)
+            printf 'could not determine repository from remote URL: %s\n' "$_remote_url" >&2
+            exit 1;;
+    esac
+
+    _head="$(git rev-parse --abbrev-ref HEAD)"
+
+    # Get default branch from the API
+    _repo_info="$(api GET "/repos/$_owner_repo")"
+    _base="$(printf '%s' "$_repo_info" | jq -r '.default_branch // empty')"
+    if [ -z "$_base" ]
+    then
+        _message="$(printf '%s' "$_repo_info" | jq -r '.message // "unknown error"')"
+        printf 'could not determine default branch: %s\n' "$_message" >&2
+        exit 1
+    fi
+
+    # Compute title and body from commit history with --fill
+    _fill_title=""
+    _fill_body=""
+    if $_fill
+    then
+        git fetch origin 2>/dev/null || true
+        _range="origin/${_base}..${_head}"
+        _fill_title="$(git log --reverse --format=%s "$_range" 2>/dev/null | head -1)"
+        _fill_body="$(git log --reverse --format=%B "$_range" 2>/dev/null)"
+        if [ -z "$_fill_title" ]
+        then
+            printf 'no commits found between %s and %s\n' "$_base" "$_head" >&2
+            exit 1
+        fi
+    fi
+
+    # Apply precedence: explicit --title/--body/--body-file override --fill
+    if $_title_set
+    then _final_title="$_title"
+    else _final_title="$_fill_title"
+    fi
+
+    if $_body_file_set
+    then
+        if [ "$_body_file" = "-" ]
+        then _final_body="$(cat)"
+        elif [ -f "$_body_file" ]
+        then _final_body="$(cat "$_body_file")"
+        else
+            printf 'could not read body file: %s\n' "$_body_file" >&2
+            exit 1
+        fi
+    elif $_body_set
+    then _final_body="$_body"
+    else _final_body="$_fill_body"
+    fi
+
+    # Push the head branch to the remote
+    git push -u origin "$_head" 1>&2
+
+    # Create the pull request
+    if [ "$_draft" = "true" ]
+    then _draft_bool=true
+    else _draft_bool=false
+    fi
+    _pr_json="$(jq -n \
+        --arg title "$_final_title" \
+        --arg body "$_final_body" \
+        --arg head "$_head" \
+        --arg base "$_base" \
+        --argjson draft "$_draft_bool" \
+        '{title:$title, body:$body, head:$head, base:$base, draft:$draft}')"
+    _response="$(api POST "/repos/$_owner_repo/pulls" "$_pr_json")"
+
+    _url="$(printf '%s' "$_response" | jq -r '.html_url // empty')"
+    if [ -z "$_url" ]
+    then
+        _message="$(printf '%s' "$_response" | jq -r '.message // "unknown error"')"
+        printf 'could not create pull request: %s\n' "$_message" >&2
+        exit 1
+    fi
+    printf '%s\n' "$_url"
+}
+
+case "${1:-}" in
+    repo) shift; cmd_repo "$@";;
+    pr) shift; cmd_pr "$@";;
+    *) exit 22;;
+esac
