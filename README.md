@@ -32,7 +32,8 @@ While not strictly necessary to install Panboticon, there are two prerequisites 
 * GitHub App:
     1. Visit <https://github.com/settings/apps/new>. Give your bot a name and a homepage (which doesn't matter). Don't bother with a callback URL. Uncheck _Active_ in the **Webhook** section (unless you really want to receive webhooks). TODO permissions. Allow installation for _Any account_.
     2. Click **Generate a private key**. Keep the PEM file in a safe place locally or, much better yet, put it in 1Password.
-    3. In the left column, click **Install App**. Select the organization(s) in which you wish to install the app.
+    3. Upload an avatar for your GitHub App. If you don't, it will use your avatar and erode the anti-impersonation measures that are kind of the point here.
+    4. In the left column, click **Install App**. Select the organization(s) in which you wish to install the app.
 
 Usage
 -----
