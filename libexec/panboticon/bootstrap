@@ -200,15 +200,12 @@ EOF
     # bootstrapping programs installed.
     ssh "$NAME" sudo netfilter-persistent save
 
-    # Copy the human's ~/.screenrc and ~/.tmux.conf into the bot's home
-    # directory. The bot's not going to use these tools but when a human logs
-    # in and their keyboard configuration isn't their usual, it's annoying.
-    for FILENAME in ".screenrc" ".tmux.conf"
-    do
-        if ssh "$NAME" test -f "/home/$PANBOTICON_HUMAN_USER/$FILENAME"
-        then ssh "$NAME" sudo install -g "$PANBOTICON_BOT_USER" -m 0664 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_HUMAN_USER/$FILENAME" "/home/$PANBOTICON_BOT_USER"
-        fi
-    done
+    # Make sure auditd is running and alert the user if it's not.
+    if ! ssh "$NAME" sudo systemctl status "auditd" >"/dev/null" 2>"/dev/null"
+    then
+        ssh "$NAME" sudo systemctl start "auditd"
+        ssh "$NAME" sudo systemctl status "auditd"
+    fi
 
     echo "... Done!" >&2
 done
