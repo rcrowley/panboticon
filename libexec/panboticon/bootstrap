@@ -73,8 +73,8 @@ do
         continue
     fi
 
-    GITHUB_APP_ID="$(curl -s "https://api.github.com/users/$PANBOTICON_BOT_USER%5Bbot%5D" | jq -e -r '.id')"
-    if [ -z "$GITHUB_APP_ID" ]
+    GITHUB_APP_USER_ID="$(curl -s "https://api.github.com/users/$PANBOTICON_BOT_USER%5Bbot%5D" | jq -e -r '.id')"
+    if [ -z "$GITHUB_APP_USER_ID" ]
     then
         echo "Could not find the GitHub App $PANBOTICON_BOT_USER to configure bot GitHub access." >&2
         STATUS=1
@@ -114,6 +114,7 @@ EOF
     echo "Running \`gh auth login\` for the human user, $PANBOTICON_HUMAN_USER." >&2
     ssh "$NAME" gh auth status \|\| gh auth login
     ssh "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
+    ssh "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh "$NAME" git config --global "user.email" "$PANBOTICON_HUMAN_EMAIL"
     echo >&2
     echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot]. " >&2
@@ -122,8 +123,8 @@ EOF
     scp "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
     ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_id.txt" >"/dev/null"
-    echo "$PANBOTICON_BOT_GITHUB_APP_INSTALLATION_ID" |
-    ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_installation_id.txt" >"/dev/null"
+    echo "$PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS" |
+    ssh -b "$NAME" tee "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_installations.json" >"/dev/null"
     ssh -b "$NAME" touch "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"
     ssh -b "$NAME" chmod 600 "/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"
     if [ -f "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" ]

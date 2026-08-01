@@ -26,9 +26,9 @@
     "#": "Email addresses for the human user, which will be configured in ~/.gitconfig as the author of commits.",
     "PANBOTICON_HUMAN_EMAIL": "",
 
-    "#": "GitHub App details for the bot user. The App ID can be found on <https://github.com/settings/apps/PANBOTICON_BOT_USER>. The App Installation ID can be found in the last component of the URL like <https://github.com/organizations/ORGANIZATION/settings/installations/APP_INSTALLATION_ID> linked from <https://github.com/organizations/ORGANIZATION/settings/installations>. The private key can be generated during app setup and given as a filename or a 1Password `op://` URL.",
+    "#": "GitHub App details for the bot user. The App ID can be found on <https://github.com/settings/apps/PANBOTICON_BOT_USER>. App Installation IDs can be found in the last component of the URL like <https://github.com/apps/PANBOTICON_BOT_USER/installations/INSTALLATION_ID> or <https://github.com/organizations/ORGANIZATION/settings/installations/INSTALLATION_ID> linked by Organization from <https://github.com/settings/apps/PANBOTICON_BOT_USER/installations>. The private key can be generated during app setup and given as a pathname (relative or absolute, understands ~) or a 1Password `op://` URL.",
     "PANBOTICON_BOT_GITHUB_APP_ID": "",
-    "PANBOTICON_BOT_GITHUB_APP_INSTALLATION_ID": "",
+    "PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS": [{"INSTALLATION_ID": "", "ORGANIZATION": ""}],
     "PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY": "",
 
     "#": "Login shells to assign to the human and bot users.",
