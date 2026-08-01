@@ -137,36 +137,19 @@ EOF
         STATUS=1
     fi
     ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!'"/home/$PANBOTICON_BOT_USER/bin/panboticon-git-credential'"
+    ssh -b "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh -b "$NAME" git config --global "credential.https://github.com.username" "x-access-token"
     ssh -b "$NAME" git config --global "init.defaultBranch" "main"
     ssh -b "$NAME" git config --global --replace-all "url.https://github.com/.insteadOf" "git@github.com:"
     ssh -b "$NAME" git config --add --global "url.https://github.com/.insteadOf" "ssh://git@github.com/"
-    ssh -b "$NAME" git config --global "user.email" "$GITHUB_APP_ID+$PANBOTICON_BOT_USER\[bot\]@users.noreply.github.com"
+    ssh -b "$NAME" git config --global "user.email" "$GITHUB_APP_USER_ID+$PANBOTICON_BOT_USER\[bot\]@users.noreply.github.com"
     ssh -b "$NAME" git config --global "user.name" "$PANBOTICON_BOT_USER\[bot\]"
     echo >&2
     echo "... Done!" >&2
 
-    # Install and configure Claude Code.
-    #
-    # Until <https://github.com/anthropics/claude-code/issues/21570>, we'll
-    # have to settle for installing Claude Code once per user as directed by
-    # <https://claude.com/product/claude-code>.
-    ssh "$NAME" "\$HOME/.local/bin/claude" update \|\| curl -L -S -f -s "https://claude.ai/install.sh" \| bash
-    ssh -b "$NAME" "\$HOME/.local/bin/claude" update \|\| curl -L -S -f -s "https://claude.ai/install.sh" \| bash
-
-    # Install and configure Codex.
-    ssh "$NAME" which "node" \|\| curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
-    ssh "$NAME" sudo npm install -g "@openai/codex"
-
-    # Install and configure Cursor CLI.
-    ssh "$NAME" "\$HOME/.local/bin/agent" update \|\| curl -S -f -s "https://cursor.com/install" \| bash
-    ssh -b "$NAME" "\$HOME/.local/bin/agent" update \|\| curl -S -f -s "https://cursor.com/install" \| bash
-
-    # Install and configure OpenCode.
-    ssh "$NAME" "\$HOME/.opencode/bin/opencode" update \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-    ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" update \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-
-    # Install and configure Pi.
+    # Install OpenCode and Pi.
+    ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
+    ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
     ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
 
