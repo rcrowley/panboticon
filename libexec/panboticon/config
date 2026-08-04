@@ -30,9 +30,20 @@ if [ "$1" ]
 then usage 1
 fi
 
-env | grep "^PANBOTICON_" | sort |
+env |
+grep "^PANBOTICON_" |
+sort |
 case "$FORMAT" in
-    "env") exec cat;;
-    "json") exec jq -R -s 'split("\n") | map(select(length > 0) | split("=") | {(.[0]): (.[1:] | join("="))}) | add';;
+    "env")
+        sed -E '
+            s/^(PANBOTICON_[^=]*)=([^[{].*)?$/\1="\2"/
+            s/^(PANBOTICON_[^=]*)=([[{].*)$/\1='"'"'\2'"'"'/
+        ';;
+    "json")
+        sed -E '
+            s/^(PANBOTICON_[^=]*)=([^[{].*)?$/{"\1": "\2"}/
+            s/^(PANBOTICON_[^=]*)=([[{].*)$/{"\1": \2}/
+        ' |
+        jq -s '. | add';;
     *) usage 1;;
 esac
