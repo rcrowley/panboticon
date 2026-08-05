@@ -145,12 +145,14 @@ EOF
     ssh -b "$NAME" git config --global "user.name" "$PANBOTICON_BOT_USER\[bot\]"
     echo "... Done!" >&2
 
-    # Install OpenCode and Pi.
-    echo "Installing the OpenCode and Pi agent harnesses..." >&2
+    # Install OpenCode and Pi. Put them in a Swamp.
+    echo "Installing the OpenCode and Pi agent harnesses in a Swamp..." >&2
     ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
     ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
+    ssh "$NAME" "\$HOME/.local/bin/swamp" update \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_HUMAN_USER/.local/bin"
+    ssh -b "$NAME" "\$HOME/.local/bin/swamp" update \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_BOT_USER/.local/bin"
     echo "... Done!" >&2
 
     # Run additional configured bootstrapping programs for both human and bot.
