@@ -28,7 +28,7 @@ fi
 # Install the local opener service (from rcrowley's fork of opener to get the
 # directory-of-control-sockets variant of jomiller's auto-forwarding patch) to
 # catch URLs from the remote xdg-open stand-in.
-echo "Installing opener locally to open browser windows for OAuth flows on Panboticon instances ..." >&2
+echo "Installing opener locally to open browser windows for OAuth flows on Panboticon instances..." >&2
 if ! which "opener" >"/dev/null"
 then
     if [ -d "$HOME/var/cache/opener" ]
@@ -37,7 +37,7 @@ then
     fi
     (cd "$HOME/var/cache/opener" && go install) # TODO drop the local Go toolchain requirement
 fi
-which "opener"
+which "opener" >"/dev/null"
 mkdir -p "$HOME/Library/LaunchAgents"
 cat >"$HOME/Library/LaunchAgents/opener.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -72,16 +72,7 @@ do
         STATUS=1
         continue
     fi
-
-    GITHUB_APP_USER_ID="$(curl -s "https://api.github.com/users/$PANBOTICON_BOT_USER%5Bbot%5D" | jq -e -r '.id')"
-    if [ -z "$GITHUB_APP_USER_ID" ]
-    then
-        echo "Could not find the GitHub App $PANBOTICON_BOT_USER to configure bot GitHub access." >&2
-        STATUS=1
-        continue
-    fi
-
-    echo "Bootstrapping Panboticon instance $NAME ..." >&2
+    echo "Bootstrapping Panboticon instance $NAME..." >&2
 
     # Install gh, iptables-persistent, screen, and tmux - almost everything we
     # need to let the bot run wild in its cell.
@@ -108,16 +99,23 @@ EOF
     ssh "$NAME" sudo chmod +x "/usr/local/bin/xdg-open"
     ssh "$NAME" sudo ln -f -s "xdg-open" "/usr/local/bin/open"
 
-    # Authenticate both the human and the bot with GitHub. These boxen are
-    # after all also usable by the human as regular development machines.
-    echo "Authenticating human and bot user with GitHub ..." >&2
-    echo "Running \`gh auth login\` for the human user, $PANBOTICON_HUMAN_USER." >&2
+    # Authenticate the human user with GitHub.
+    echo "Authenticating the human user, $PANBOTICON_HUMAN_USER, with GitHub..." >&2
     ssh "$NAME" gh auth status \|\| gh auth login
     ssh "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
     ssh "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh "$NAME" git config --global "user.email" "$PANBOTICON_HUMAN_EMAIL"
-    echo >&2
-    echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot]. " >&2
+    echo "... Done!" >&2
+
+    # Configure Git access for the bot user's GitHub App.
+    echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot]..." >&2
+    GITHUB_APP_USER_ID="$(curl -s "https://api.github.com/users/$PANBOTICON_BOT_USER%5Bbot%5D" | jq -e -r '.id')"
+    if [ -z "$GITHUB_APP_USER_ID" ]
+    then
+        echo "Could not find the GitHub App $PANBOTICON_BOT_USER to configure bot GitHub access." >&2
+        STATUS=1
+        continue
+    fi
     ssh -b "$NAME" mkdir -p "/home/$PANBOTICON_BOT_USER/bin" "/home/$PANBOTICON_BOT_USER/.panboticon"
     scp "$PANBOTICON_LIB/gh" "$PANBOTICON_BOT_USER@$NAME:bin/gh"
     scp "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
@@ -145,18 +143,20 @@ EOF
     ssh -b "$NAME" git config --add --global "url.https://github.com/.insteadOf" "ssh://git@github.com/"
     ssh -b "$NAME" git config --global "user.email" "$GITHUB_APP_USER_ID+$PANBOTICON_BOT_USER\[bot\]@users.noreply.github.com"
     ssh -b "$NAME" git config --global "user.name" "$PANBOTICON_BOT_USER\[bot\]"
-    echo >&2
     echo "... Done!" >&2
 
     # Install OpenCode and Pi.
+    echo "Installing the OpenCode and Pi agent harnesses..." >&2
     ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
     ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
+    echo "... Done!" >&2
 
     # Run additional configured bootstrapping programs for both human and bot.
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
     then
+        echo "Running custom bootstrapping program $PANBOTICON_HUMAN_BOOTSTRAP for the human user, $PANBOTICON_HUMAN_USER..." >&2
         scp -r "$HOME/.gnupg" "$PANBOTICON_HUMAN_USER@$NAME:" # XXX HERE BE DRAGONS (surely this is just a bad idea but I don't have a better one)
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
         scp "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:panboticon-bootstrap.$EXT"
@@ -166,9 +166,11 @@ EOF
             "rb") ssh "$NAME" ruby "panboticon-bootstrap.$EXT";;
             *) ssh "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
         esac
+        echo "... Done!" >&2
     fi
     if [ -f "$PANBOTICON_BOT_BOOTSTRAP" ]
     then
+        echo "Running custom bootstrapping program $PANBOTICON_BOT_BOOTSTRAP for the botuser, $PANBOTICON_BOT_USER..." >&2
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
         scp "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:panboticon-bootstrap.$EXT"
         case "$EXT" in
@@ -177,20 +179,23 @@ EOF
             "rb") ssh -b "$NAME" ruby "panboticon-bootstrap.$EXT";;
             *) ssh -b "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
         esac
+        echo "... Done!" >&2
     fi
 
     # Save the iptables(8) rules that deny the bot user access to the EC2 IMDS
     # and rules added by Docker, Tailscale, or whatever else the configured
     # bootstrapping programs installed.
-    ssh "$NAME" sudo netfilter-persistent save
-
+    #
     # Make sure auditd is running and alert the user if it's not.
+    echo "Finishing bootstrapping Panboticon instance $NAME..." >&2
+    ssh "$NAME" sudo netfilter-persistent save
     if ! ssh "$NAME" sudo systemctl status "auditd" >"/dev/null" 2>"/dev/null"
     then
         ssh "$NAME" sudo systemctl start "auditd"
         ssh "$NAME" sudo systemctl status "auditd"
     fi
-
     echo "... Done!" >&2
+
+    echo "... All done!" >&2
 done
 exit "$STATUS"
