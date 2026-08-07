@@ -104,7 +104,6 @@ aws_duplicates_ok ec2 authorize-security-group-egress \
 echo " Done! Security group ID: $SECURITY_GROUP_ID" >&2
 
 printf "Launching the Panboticon instance ..." >&2
-KEY_NAME="rcrowley-rsa" # XXX delete once the user-data.sh is very solid
 ssh-add -L >"$TMP/authorized_keys"
 if [ ! -s "$TMP/authorized_keys" ]
 then
@@ -177,7 +176,6 @@ INSTANCE_ID="$(
         --associate-public-ip-address \
         --block-device-mappings Ebs=\{VolumeSize=100\},DeviceName="/dev/sda1" \
         --image-id "$IMAGE_ID" \
-        --key-name "$KEY_NAME" \
         --iam-instance-profile Name="$PANBOTICON_INSTANCE_PROFILE" \
         --instance-type "$PANBOTICON_INSTANCE_TYPE" \
         --security-group-ids "$SECURITY_GROUP_ID" \
