@@ -13,7 +13,7 @@
     "#": "AWS subnet ID where Panboticon instances are launched. If this is specified, it must be in PANBOTICON_VPC_ID. If this is not specified, a suitable subnet in PANBOTICON_VPC_ID and PANBOTICON_AZ is chosen.",
     "PANBOTICON_SUBNET_ID": "",
 
-    "#": "AWS IAM instance profile for Panboticon instances. This is how you'll give your Panboticon instance access to use AWS APIs.",
+    "#": "AWS IAM instance profile for Panboticon instances. This is how you'll give your Panboticon instance access to use AWS APIs. The instance profile's role must attach the AmazonSSMManagedInstanceCore policy.",
     "PANBOTICON_IAM_INSTANCE_PROFILE": "",
 
     "#": "AWD EC2 instance type for Panboticon instances.",

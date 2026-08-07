@@ -9,7 +9,7 @@ usage() {
     exit "$1"
 }
 
-BOT="" USER="$PANBOTICON_HUMAN_USER"
+USER="$PANBOTICON_HUMAN_USER"
 if [ "$(basename "$0")" = "$1" ]
 then shift
 fi
@@ -17,7 +17,7 @@ while [ "$#" -gt 0 ]
 do
     case "$1" in
 
-        "-b"|"--bot") BOT="-b" USER="$PANBOTICON_BOT_USER" shift;;
+        "-b"|"--bot") USER="$PANBOTICON_BOT_USER" shift;;
 
         "-h"|"--help") usage 0;;
 
@@ -25,17 +25,22 @@ do
 
     esac
 done
+
+. "$PANBOTICON_LIB/aws.sh"
+
+SSH="$(
+    which -a "ssh" |
+    grep -v "$PANBOTICON_LIBEXEC" |
+    head -n 1
+)"
+
 if [ -z "$1" ]
 then
     boxen >"$TMP/boxen.txt"
     if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
-    then exec ssh $BOT -l "$USER" "$(cat "$TMP/boxen.txt")"
+    then exec "$SSH" -l "$USER" "$(cat "$TMP/boxen.txt")"
     else usage 1
     fi
 fi
 
-exec "$(
-    which -a "ssh" |
-    grep -v "$PANBOTICON_LIBEXEC" |
-    head -n 1
-)" -l "$USER" "$@"
+exec "$SSH" -l "$USER" "$@"

@@ -23,12 +23,14 @@ From a Git work tree (say, if you're going to work on Panboticon itself):
 
     export PATH="/path-to-panboticon-work-tree/bin:$PATH"
 
-While not strictly necessary to install Panboticon, there are two prerequisites without which you won't make it very far using Panboticon:
+While not strictly necessary to install Panboticon, there are four prerequisites without which you won't make it very far using Panboticon:
 
 * AWS CLI:
     * Functioning `aws sso login` command.
     * Standing access via `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and sometimes `AWS_SESSION_TOKEN` environment variables.
     * Some other default credential provider the AWS SDK understands.
+* AWS CLI [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+* AWS IAM role and instance profile with the AmazonSSMManagedInstanceCore policy attached
 * GitHub App:
     1. Visit <https://github.com/settings/apps/new>. Give your bot a name and a homepage (which doesn't matter). Don't bother with a callback URL. Uncheck _Active_ in the **Webhook** section (unless you really want to receive webhooks). Grant read and write permissions for repository administration, contents, issues, and pull requests. Allow installation for _Any account_.
     2. Click **Generate a private key**. Keep the PEM file in a safe place locally or, much better yet, put it in 1Password.

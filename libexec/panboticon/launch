@@ -89,12 +89,6 @@ SECURITY_GROUP_ID="$(
     jq -e -r '.SecurityGroups[].GroupId'
 )"
 [ "$SECURITY_GROUP_ID" ]
-aws_duplicates_ok ec2 authorize-security-group-ingress \
-    --cidr "0.0.0.0/0" \
-    --group-id "$SECURITY_GROUP_ID" \
-    --output "off" \
-    --port 22 \
-    --protocol "tcp"
 aws_duplicates_ok ec2 authorize-security-group-egress \
     --cidr "0.0.0.0/0" \
     --group-id "$SECURITY_GROUP_ID" \
@@ -170,6 +164,8 @@ install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$P
 install -g "$PANBOTICON_HUMAN_USER" -m 0600 -o "$PANBOTICON_HUMAN_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_HUMAN_USER/.ssh"
 install -g "$PANBOTICON_BOT_USER" -m 0640 -o "$PANBOTICON_BOT_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_BOT_USER/.ssh" 
 chattr +i "/home/$PANBOTICON_BOT_USER/.ssh/authorized_keys"
+
+snap start "amazon-ssm-agent"
 USER_DATA_EOF
 INSTANCE_ID="$(
     aws ec2 run-instances \
@@ -188,27 +184,30 @@ printf " $INSTANCE_ID ..." >&2
 while sleep 2
 do
     printf "." >&2
-    PUBLIC_IP_ADDRESS="$(
-        aws ec2 describe-instances --filters \
-            Name="instance-id",Values="$INSTANCE_ID" |
-        jq -r '.Reservations[].Instances[].PublicIpAddress'
+    PING_STATUS="$(
+        aws ssm describe-instance-information \
+            --filters "Key=InstanceIds,Values=$INSTANCE_ID" 2>"/dev/null" |
+        jq -r '.InstanceInformationList[].PingStatus'
     )"
-    if [ "$PUBLIC_IP_ADDRESS" ]
+    if [ "$PING_STATUS" = "Online" ]
     then break
     fi
 done
 mkdir -m"0700" -p "$HOME/.ssh/control"
+if ! grep -q '^Include \*\.ssh_config # Panboticon$' "$HOME/.ssh/config"
+then printf "\n\nInclude *.ssh_config # Panboticon\n" >>"$HOME/.ssh/config"
+fi
 cat >"$HOME/.ssh/$NAME.ssh_config" <<EOF
 Host $NAME
-    # $INSTANCE_ID
     ControlMaster auto
     ControlPath ~/.ssh/control/%C.sock
     ControlPersist 12h
-    Hostname $PUBLIC_IP_ADDRESS
+    Hostname $INSTANCE_ID
+    ProxyCommand aws ssm start-session --document-name AWS-StartSSHSession --parameters '{"portNumber":["%p"]}' --region $PANBOTICON_REGION --target %h
     RemoteForward /home/%r/.opener.sock:%d/.opener.sock
 EOF
-printf " $PUBLIC_IP_ADDRESS / $NAME ..." >&2
-until ssh -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$PUBLIC_IP_ADDRESS" : >"/dev/null" 2>&1
+printf " $NAME ..." >&2
+until ssh -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1
 do
     sleep 2
     printf "." >&2
