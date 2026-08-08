@@ -95,6 +95,10 @@ aws_duplicates_ok ec2 authorize-security-group-egress \
     --output "off" \
     --port "0-65535" \
     --protocol "all"
+aws_duplicates_ok ec2 authorize-security-group-egress \
+    --group-id "$SECURITY_GROUP_ID" \
+    --ip-permissions "IpProtocol=-1,Ipv6Ranges=[{CidrIpv6=::/0}]" \
+    --output "off"
 echo " Done! Security group ID: $SECURITY_GROUP_ID" >&2
 
 printf "Launching the Panboticon instance ..." >&2
