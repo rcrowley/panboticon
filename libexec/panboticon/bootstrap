@@ -164,10 +164,10 @@ EOF
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
         scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:panboticon-bootstrap.$EXT"
         case "$EXT" in
-            "go") ssh "$NAME" go run "panboticon-bootstrap.$EXT";;
-            "py") ssh "$NAME" python "panboticon-bootstrap.$EXT";;
-            "rb") ssh "$NAME" ruby "panboticon-bootstrap.$EXT";;
-            *) ssh "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
+            "go") ssh -t "$NAME" go run "panboticon-bootstrap.$EXT";;
+            "py") ssh -t "$NAME" python "panboticon-bootstrap.$EXT";;
+            "rb") ssh -t "$NAME" ruby "panboticon-bootstrap.$EXT";;
+            *) ssh -t "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
         esac
         echo "... Done!" >&2
     fi
@@ -177,10 +177,10 @@ EOF
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
         scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:panboticon-bootstrap.$EXT"
         case "$EXT" in
-            "go") ssh -b "$NAME" go run "panboticon-bootstrap.$EXT";;
-            "py") ssh -b "$NAME" python "panboticon-bootstrap.$EXT";;
-            "rb") ssh -b "$NAME" ruby "panboticon-bootstrap.$EXT";;
-            *) ssh -b "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
+            "go") ssh -b -t "$NAME" go run "panboticon-bootstrap.$EXT";;
+            "py") ssh -b -t "$NAME" python "panboticon-bootstrap.$EXT";;
+            "rb") ssh -b -t "$NAME" ruby "panboticon-bootstrap.$EXT";;
+            *) ssh -b -t "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
         esac
         echo "... Done!" >&2
     fi
