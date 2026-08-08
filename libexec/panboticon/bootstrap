@@ -147,10 +147,11 @@ EOF
 
     # Install OpenCode and Pi. Put them in a Swamp.
     echo "Installing the OpenCode and Pi agent harnesses in a Swamp..." >&2
+    ssh "$NAME" which "node" \|\| curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
     ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
     ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-    ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
-    ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| sh
+    ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
+    ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
     ssh "$NAME" "\$HOME/.local/bin/swamp" update \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_HUMAN_USER/.local/bin"
     ssh -b "$NAME" "\$HOME/.local/bin/swamp" update \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_BOT_USER/.local/bin"
     echo "... Done!" >&2
