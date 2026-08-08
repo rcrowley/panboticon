@@ -66,8 +66,8 @@ do
         esac
     fi
 
-    if [ -f "$HOME/.ssh/$1.ssh_config" ]
-    then awk '/^    Hostname i-/ {print $2}' "$HOME/.ssh/$1.ssh_config"
+    if [ -f "$HOME/.ssh/panboticon/$1.ssh_config" ]
+    then awk '/^    Hostname i-/ {print $2}' "$HOME/.ssh/panboticon/$1.ssh_config"
 
     elif echo "$1" | grep -q "^i-"
     then echo "$1"
@@ -82,7 +82,7 @@ do
 done |
 while read INSTANCE_ID
 do
-    find "$HOME/.ssh" -name "*.ssh_config" |
+    find "$HOME/.ssh/panboticon" -name "*.ssh_config" |
     xargs grep -E -l '^    Hostname '"$INSTANCE_ID"'$' |
     xargs rm -f
     echo "$INSTANCE_ID"

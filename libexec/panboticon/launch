@@ -193,11 +193,8 @@ do
     then break
     fi
 done
-mkdir -m"0700" -p "$HOME/.ssh/control"
-if ! grep -q '^Include \*\.ssh_config # Panboticon$' "$HOME/.ssh/config"
-then printf "\n\nInclude *.ssh_config # Panboticon\n" >>"$HOME/.ssh/config"
-fi
-cat >"$HOME/.ssh/$NAME.ssh_config" <<EOF
+mkdir -m"0700" -p "$HOME/.ssh/control" "$HOME/.ssh/panboticon"
+cat >"$HOME/.ssh/panboticon/$NAME.ssh_config" <<EOF
 Host $NAME
     ControlMaster auto
     ControlPath ~/.ssh/control/%C.sock
@@ -209,7 +206,7 @@ Host $NAME
     SetEnv TERM="$PANBOTICON_TERM"
 EOF
 printf " $NAME ..." >&2
-until ssh -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1
+until ssh -F "$HOME/.ssh/panboticon/$NAME.ssh_config" -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1
 do
     sleep 2
     printf "." >&2
