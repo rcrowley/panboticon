@@ -205,6 +205,8 @@ Host $NAME
     Hostname $INSTANCE_ID
     ProxyCommand aws ssm start-session --document-name AWS-StartSSHSession --parameters '{"portNumber":["%p"]}' --region $PANBOTICON_REGION --target %h
     RemoteForward /home/%r/.opener.sock:%d/.opener.sock
+    ServerAliveInterval 60
+    SetEnv TERM="$PANBOTICON_TERM"
 EOF
 printf " $NAME ..." >&2
 until ssh -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1

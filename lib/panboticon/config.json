@@ -35,6 +35,9 @@
     "PANBOTICON_HUMAN_SHELL": "/bin/zsh",
     "PANBOTICON_BOT_SHELL": "/bin/bash",
 
+    "#": "TERM environment variable to assign when SSH'ing to Panboticon instances.",
+    "PANBOTICON_TERM": "xterm-256color",
+
     "#": "Paths to shell programs containing additional bootstrapping commands for human and bot users. These will be executed interactively while launching instances to facilitate e.g. OAuth flows.",
     "PANBOTICON_HUMAN_BOOTSTRAP": "",
     "PANBOTICON_BOT_BOOTSTRAP": "",
