@@ -100,7 +100,7 @@ EOF
     ssh "$NAME" sudo ln -f -s "xdg-open" "/usr/local/bin/open"
 
     # Authenticate the human user with GitHub.
-    echo "Authenticating the human user, $PANBOTICON_HUMAN_USER, with GitHub..." >&2
+    echo "Authenticating the human user, $PANBOTICON_HUMAN_USER, with GitHub ..." >&2
     ssh "$NAME" gh auth status \|\| gh auth login
     ssh "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
     ssh "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
@@ -108,7 +108,7 @@ EOF
     echo "... Done!" >&2
 
     # Configure Git access for the bot user's GitHub App.
-    echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot]..." >&2
+    echo "Configuring Git access for the bot user's GitHub App, $PANBOTICON_BOT_USER[bot] ..." >&2
     GITHUB_APP_USER_ID="$(curl -s "https://api.github.com/users/$PANBOTICON_BOT_USER%5Bbot%5D" | jq -e -r '.id')"
     if [ -z "$GITHUB_APP_USER_ID" ]
     then
