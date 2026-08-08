@@ -52,13 +52,13 @@ cat >"$HOME/Library/LaunchAgents/opener.plist" <<EOF
     </dict>
 </plist>
 EOF
-launchctl unload "$HOME/Library/LaunchAgents/opener.plist" || :
-launchctl load "$HOME/Library/LaunchAgents/opener.plist"
 mkdir -p "$HOME/.config/opener"
 cat >"$HOME/.config/opener/config.yaml" <<EOF
 auto-forward-control-socket-directory: ~/.ssh/control
 auto-forward-ttl: 60s
 EOF
+launchctl unload "$HOME/Library/LaunchAgents/opener.plist" || :
+launchctl load "$HOME/Library/LaunchAgents/opener.plist"
 echo "... Done!" >&2
 
 # Bootstrap each Panboticon instance given as an argument.
