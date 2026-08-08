@@ -117,8 +117,8 @@ EOF
         continue
     fi
     ssh -b "$NAME" mkdir -p "/home/$PANBOTICON_BOT_USER/bin" "/home/$PANBOTICON_BOT_USER/.panboticon"
-    scp "$PANBOTICON_LIB/gh" "$PANBOTICON_BOT_USER@$NAME:bin/gh"
-    scp "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
+    scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_LIB/gh" "$PANBOTICON_BOT_USER@$NAME:bin/gh"
+    scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
     ssh -b "$NAME" sh -c "'"'tee "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_id.txt"'" >"/dev/null"'"'"
     echo "$PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS" |
@@ -126,7 +126,7 @@ EOF
     ssh -b "$NAME" sh -c "'"'touch "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"'"'"'"
     ssh -b "$NAME" sh -c "'"'chmod 600 "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"'"'"'"
     if [ -f "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" ]
-    then scp "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$PANBOTICON_BOT_USER@$NAME:.panboticon/github_app_private_key.pem"
+    then scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$PANBOTICON_BOT_USER@$NAME:.panboticon/github_app_private_key.pem"
     elif echo "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" | grep -q "^op://"
     then
         op read "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" |
@@ -160,9 +160,9 @@ EOF
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
     then
         echo "Running custom bootstrapping program $PANBOTICON_HUMAN_BOOTSTRAP for the human user, $PANBOTICON_HUMAN_USER..." >&2
-        scp -r "$HOME/.gnupg" "$PANBOTICON_HUMAN_USER@$NAME:" # XXX HERE BE DRAGONS (surely this is just a bad idea but I don't have a better one)
+        scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" -r "$HOME/.gnupg" "$PANBOTICON_HUMAN_USER@$NAME:" # XXX HERE BE DRAGONS (surely this is just a bad idea but I don't have a better one)
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
-        scp "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:panboticon-bootstrap.$EXT"
+        scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:panboticon-bootstrap.$EXT"
         case "$EXT" in
             "go") ssh "$NAME" go run "panboticon-bootstrap.$EXT";;
             "py") ssh "$NAME" python "panboticon-bootstrap.$EXT";;
@@ -175,7 +175,7 @@ EOF
     then
         echo "Running custom bootstrapping program $PANBOTICON_BOT_BOOTSTRAP for the botuser, $PANBOTICON_BOT_USER..." >&2
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
-        scp "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:panboticon-bootstrap.$EXT"
+        scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:panboticon-bootstrap.$EXT"
         case "$EXT" in
             "go") ssh -b "$NAME" go run "panboticon-bootstrap.$EXT";;
             "py") ssh -b "$NAME" python "panboticon-bootstrap.$EXT";;
