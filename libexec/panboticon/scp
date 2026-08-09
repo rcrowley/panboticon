@@ -1,0 +1,56 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon scp [-b] [\e[4m...\e[0m] [\e[4mname\e[0m]:\e[4mremote-path\e[0m [\e[4mlocal-path\e[0m]\n" >&2
+    printf "       panboticon scp [-b] [\e[4m...\e[0m] \e[4mlocal-path\e[0m [\e[4mname\e[0m]:[\e[4mremote-path\e[0m]\n" >&2
+    printf "  -b        SCP as the bot user instead of the human user\n" >&2
+    printf "  \e[4mname\e[0m  name of the Panboticon instance to SCP to/from (inferred from \`panboticon boxen\` if not given and there's only one)\n" >&2
+    printf "  \e[4msrc-path\e[0m  pathname of the source file (remote, if given with \e[4mname\e[0m)\n" >&2
+    printf "  \e[4mdest-path\e[0m  pathname of the destination file (remote, if given with \e[4mname\e[0m)\n" >&2
+    exit "$1"
+}
+
+USER="$PANBOTICON_HUMAN_USER"
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-b"|"--bot") USER="$PANBOTICON_BOT_USER" shift;;
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+
+. "$PANBOTICON_LIB/aws.sh"
+
+SCP="$(
+    which -a "scp" |
+    grep -v "$PANBOTICON_LIBEXEC" |
+    head -n 1
+)"
+
+for A in "$@"
+do
+    case "$A" in
+        *":"*)
+            NAME="${A%%:*}"
+            if [ "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" ]
+            then exec "$SCP" -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -o "User=$USER" "$@"
+            fi;;
+        ":"*)
+            boxen >"$TMP/boxen.txt"
+            if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
+            then exec "$SCP" -F "$HOME/.panboticon/etc/ssh_config/$(cat "$TMP/boxen.txt").ssh_config" -o "User=$USER" "$@"
+            fi;;
+    esac
+done
+echo "Could not find the name of a Panboticon instance with an SSH configuration amonst the arguments: $*" >&2
+exit 1
