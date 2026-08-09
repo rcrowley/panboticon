@@ -33,6 +33,9 @@ SSH="$(
     grep -v "$PANBOTICON_LIBEXEC" |
     head -n 1
 )"
+if [ "$TERM" = "xterm-ghostty" ]
+then export TERM="xterm-256color"
+fi
 
 if [ -z "$1" ]
 then
