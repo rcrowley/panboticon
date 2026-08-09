@@ -1,0 +1,124 @@
+#!/bin/sh
+
+set -e
+
+git commit --no-gpg-sign "$@" >"/dev/null"
+
+TMP="$(mktemp -d)"
+trap "rm -f -r \"$TMP\"" EXIT
+
+BRANCH="$(git rev-parse --abbrev-ref "HEAD")"
+COMMIT="$(git rev-parse "HEAD")"
+TREE="$(git cat-file -p "$COMMIT" | awk '/^tree /{print $2; exit}')"
+
+REMOTE_URL="$(git remote get-url "origin")"
+if [ -z "$REMOTE_URL" ]
+then
+    echo "no remote \"origin\"" >&2
+    exit 1
+fi
+
+REPO="$(echo "$REMOTE_URL" | sed 's/^https:\/\/github\.com\///; s/^git@github\.com://; s/\.git$//')"
+case "$REPO" in
+    *"/"*"/"*)
+        echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
+        exit 1;;
+    */*) ;;
+    *)
+        echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
+        exit 1;;
+esac
+ORG="${REPO%%/*}"
+
+TOKEN="$(
+    printf "protocol=https\nhost=github.com\npath=%s/x\nusername=x-access-token\n\n" "$ORG" |
+    git credential fill |
+    sed -n 's/^password=//p'
+)"
+if [ -z "$TOKEN" ]
+then
+    echo "failed to mint token for organization: $ORG." >&2
+    exit 1
+fi
+
+VERIFIER_BRANCH="panboticon-verifier-$COMMIT"
+if ! git push origin "HEAD:$VERIFIER_BRANCH" >"/dev/null"
+then
+    echo "failed to push to GitHub" >&2
+    git reset --soft "HEAD~1" >"/dev/null"
+    exit 1
+fi
+
+jq \
+    --arg msg "$(git log -1 --format="%B" "$COMMIT")" \
+    --argjson parents "$(
+        git cat-file -p "$COMMIT" |
+        awk '/^parent /{print $2}' |
+        jq -R '.' |
+        jq -s '.'
+    )" \
+    --arg tree "$TREE" \
+    -n \
+    '{message: $msg, parents: $parents, tree: $tree}' >"$TMP/POST-commits.req.json"
+if ! curl \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    -X "POST" \
+    -d @"$TMP/POST-commits.req.json" \
+    -f -s \
+    "https://api.github.com/repos/$REPO/git/commits" >"$TMP/POST-commits.resp.json"
+then
+    echo "failed to push commit via the GitHub API" >&2
+    cat "$TMP/POST-commits.resp.json" >&2
+    curl \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer $TOKEN" \
+        -X "DELETE" \
+        -f -s \
+        "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
+    git reset --soft "HEAD~1" >"/dev/null"
+    exit 1
+fi
+VERIFIED_COMMIT="$(jq -r '.sha' "$TMP/POST-commits.resp.json")"
+if [ -z "$VERIFIED_COMMIT" -o "$VERIFIED_COMMIT" = "null" ]
+then
+    echo "failed to push commit via the GitHub API" >&2
+    cat "$TMP/POST-commits.resp.json" >&2
+    git reset --soft "HEAD~1" >"/dev/null"
+    curl \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Accept: application/vnd.github+json" \
+        -X "DELETE" \
+        -f -s \
+        "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
+    exit 1
+fi
+VERIFIED="$(jq -r '.commit.verification.verified' "$TMP/POST-commits.resp.json")"
+
+jq \
+    --arg sha "$VERIFIED_COMMIT" \
+    -n \
+    '{sha: $sha, force: true}' >"$TMP/PATCH-refs.req.json"
+if ! curl \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    -X "PATCH" \
+    -d @"$TMP/PATCH-refs.req.json" \
+    -f -s \
+    "https://api.github.com/repos/$REPO/git/refs/heads/$BRANCH" >"/dev/null"
+then
+    echo "failed to update branch ref" >&2
+    exit 1
+fi
+
+curl \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -X "DELETE" \
+    -f -s \
+    "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
+
+git fetch origin "$BRANCH" >"/dev/null"
+git reset --hard "origin/$BRANCH" >"/dev/null"

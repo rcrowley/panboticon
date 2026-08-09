@@ -124,6 +124,8 @@ EOF
     ssh -b "$NAME" mkdir -p ".panboticon/bin" ".panboticon/etc/github-app" "bin"
     ssh -b "$NAME" mkdir -m 0750 -p ".panboticon/run/control"
     scp -b "$PANBOTICON_LIB/gh" "$NAME:bin/gh"
+    scp -b "$PANBOTICON_LIB/git" "$NAME:bin/git"
+    scp -b "$PANBOTICON_LIB/git-commit-verified" "$NAME:bin/git-commit-verified"
     scp -b "$PANBOTICON_LIB/git-credential-helper" "$NAME:.panboticon/bin/git-credential-helper"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
     ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/id.txt"'" >"/dev/null"'"'"

@@ -1,0 +1,72 @@
+#!/bin/sh
+
+set -e
+
+TMP="$(mktemp)"
+trap "rm -f \"$TMP\"" EXIT
+
+which -a "git" |
+grep -v "$(readlink -f "$(dirname "$0")")" |
+head -n 1 >"$TMP"
+
+DONE= SKIP=0
+for A in "$@"
+do
+    case "$A" in
+        "--attr-source") SKIP=1;;
+        "--attr-source="*) ;;
+        "--bare") ;;
+        "--config-env") SKIP=1;;
+        "--config-env="*) ;;
+        "--exec-path") ;;
+        "--exec-path") SKIP=1;;
+        "--exec-path="*) ;;
+        "--git-dir") SKIP=1;;
+        "--git-dir="*) ;;
+        "--glob-pathspecs") ;;
+        "--help") ;;
+        "--html-path") ;;
+        "--icase-pathspecs") ;;
+        "--info-path") ;;
+        "--list-cmds") SKIP=1;;
+        "--list-cmds="*) ;;
+        "--literal-pathspecs") ;;
+        "--man-path") ;;
+        "--namespace") SKIP=1;;
+        "--namespace="*) ;;
+        "--no-advice") ;;
+        "--no-lazy-fetch") ;;
+        "--no-optional-locks") ;;
+        "--no-pager") ;;
+        "--no-replace-objects") ;;
+        "--noglob-pathspecs") ;;
+        "--paginate") ;;
+        "--version") ;;
+        "--work-tree") SKIP=1;;
+        "--work-tree="*) ;;
+        "-C") SKIP=1;;
+        "-c") SKIP=1;;
+        "-C"*) ;;
+        "-c"*) ;;
+        "-h") ;;
+        "-p") ;;
+        "-P") ;;
+        "-v") ;;
+        *)
+            if [ "$SKIP" -eq 1 ]
+            then SKIP=0
+            elif [ "$A" = "commit" ]
+            then
+                echo "commit-verified"
+                continue
+            fi;;
+    esac
+    echo "$A"
+done >>"$TMP"
+
+set --
+while IFS= read -r A
+do set -- "$@" "$A"
+done <"$TMP"
+rm -f "$TMP"
+exec "$@"
