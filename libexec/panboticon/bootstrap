@@ -32,11 +32,8 @@ echo "Installing opener locally to open browser windows for OAuth flows on Panbo
 mkdir -p "$HOME/.panboticon/bin" "$HOME/.panboticon/etc" "$HOME/.panboticon/log" "$HOME/.panboticon/run"
 if [ ! -x "$HOME/.panboticon/bin/opener" ]
 then
-    if [ -d "$HOME/var/cache/opener" ]
-    then git -C "$HOME/var/cache/opener" pull "origin" "$(git -C "$HOME/var/cache/opener" branch --show-current)"
-    else git clone -b "multiple-control-sockets" "https://github.com/rcrowley/opener.git" "$HOME/var/cache/opener"
-    fi
-    (cd "$HOME/var/cache/opener" && go build -o "$HOME/.panboticon/bin/opener") # TODO drop the local Go toolchain requirement
+    curl -L -S -f -o "$TMP/opener.zip" -s "https://github.com/$PANBOTICON_OPENER_FORK/opener/releases/download/$PANBOTICON_OPENER_VERSION/opener-$PANBOTICON_OPENER_OS-$PANBOTICON_GO_ARCH.zip"
+    unzip -d "$HOME/.panboticon/bin" -j -o "$TMP/opener.zip" "opener"
 fi
 [ -x "$HOME/.panboticon/bin/opener" ]
 mkdir -p "$HOME/Library/LaunchAgents"

@@ -53,6 +53,13 @@ then PANBOTICON_AWS_ARCH="arm64" PANBOTICON_NODEJS_ARCH="arm64" PANBOTICON_UBUNT
 fi
 export PANBOTICON_AWS_ARCH PANBOTICON_NODEJS_ARCH PANBOTICON_UBUNTU_ARCH
 
+export PANBOTICON_OPENER_FORK="rcrowley" PANBOTICON_OPENER_VERSION="v0.1.7-rcrowley.0"
+export PANBOTICON_OPENER_ARCH="$(uname -m)" PANBOTICON_OPENER_OS="$(uname -s | tr "[:upper:]" "[:lower:]")"
+case "$PANBOTICON_OPENER_ARCH" in
+    "aarch64") PANBOTICON_OPENER_ARCH="arm64";; # Opener uses Go-style
+    "x86_64") PANBOTICON_OPENER_ARCH="amd64";;  # architecture names
+esac
+
 export PANBOTICON_NODEJS_VERSION="24.16.0"
 
 export PANBOTICON_UBUNTU_VERSION="24.04" # XXX PlanetScale still mostly uses 24.04 but 26.04 is out
