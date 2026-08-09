@@ -28,37 +28,43 @@ fi
 # Install the local opener service (from rcrowley's fork of opener to get the
 # directory-of-control-sockets variant of jomiller's auto-forwarding patch) to
 # catch URLs from the remote xdg-open stand-in.
-echo "Installing opener locally to open browser windows for OAuth flows on Panboticon instances..." >&2
-if ! which "opener" >"/dev/null"
+echo "Installing opener locally to open browser windows for OAuth flows on Panboticon instances ..." >&2
+mkdir -p "$HOME/.panboticon/bin" "$HOME/.panboticon/etc" "$HOME/.panboticon/log" "$HOME/.panboticon/run"
+if [ ! -x "$HOME/.panboticon/bin/opener" ]
 then
     if [ -d "$HOME/var/cache/opener" ]
     then git -C "$HOME/var/cache/opener" pull "origin" "$(git -C "$HOME/var/cache/opener" branch --show-current)"
     else git clone -b "multiple-control-sockets" "https://github.com/rcrowley/opener.git" "$HOME/var/cache/opener"
     fi
-    (cd "$HOME/var/cache/opener" && go install) # TODO drop the local Go toolchain requirement
+    (cd "$HOME/var/cache/opener" && go build -o "$HOME/.panboticon/bin/opener") # TODO drop the local Go toolchain requirement
 fi
-which "opener" >"/dev/null"
+[ -x "$HOME/.panboticon/bin/opener" ]
 mkdir -p "$HOME/Library/LaunchAgents"
-cat >"$HOME/Library/LaunchAgents/opener.plist" <<EOF
+cat >"$HOME/Library/LaunchAgents/panboticon-opener.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
     <dict>
-        <key>Label</key><string>opener</string>
-        <key>ProgramArguments</key><array><string>/Users/rcrowley/bin/opener</string></array>
+        <key>Label</key><string>panboticon-opener</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>$HOME/.panboticon/bin/opener</string>
+            <string>--config</string>
+            <string>$HOME/.panboticon/etc/opener.yaml</string>
+        </array>
         <key>KeepAlive</key><true/>
-        <key>StandardOutPath</key><string>/tmp/opener.stdout</string>
-        <key>StandardErrorPath</key><string>/tmp/opener.stderr</string>
+        <key>StandardOutPath</key><string>$HOME/.panboticon/log/opener.stdout</string>
+        <key>StandardErrorPath</key><string>$HOME/.panboticon/log/opener.stderr</string>
     </dict>
 </plist>
 EOF
-mkdir -p "$HOME/.config/opener"
-cat >"$HOME/.config/opener/config.yaml" <<EOF
-auto-forward-control-socket-directory: ~/.ssh/control
+cat >"$HOME/.panboticon/etc/opener.yaml" <<EOF
+auto-forward-control-socket-directory: ~/.panboticon/run/control
 auto-forward-ttl: 60s
+address: ~/.panboticon/run/opener.sock
 EOF
-launchctl unload "$HOME/Library/LaunchAgents/opener.plist" || :
-launchctl load "$HOME/Library/LaunchAgents/opener.plist"
+launchctl unload "$HOME/Library/LaunchAgents/panboticon-opener.plist" || :
+launchctl load "$HOME/Library/LaunchAgents/panboticon-opener.plist"
 echo "... Done!" >&2
 
 # Bootstrap each Panboticon instance given as an argument.
@@ -66,13 +72,13 @@ STATUS=0
 while [ "$#" -gt 0 ]
 do
     NAME="$1" shift
-    if [ ! -f "$HOME/.ssh/panboticon/$NAME.ssh_config" ]
+    if [ ! -f "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" ]
     then
         echo "Could not find Panboticon instance $NAME to bootstrap." >&2
         STATUS=1
         continue
     fi
-    echo "Bootstrapping Panboticon instance $NAME..." >&2
+    echo "Bootstrapping Panboticon instance $NAME ..." >&2
 
     # Install gh, iptables-persistent, screen, and tmux - almost everything we
     # need to let the bot run wild in its cell.
@@ -94,7 +100,7 @@ set -e
 if [ "$1" ]
 then echo "$@"
 else cat
-fi | nc -U "$HOME/.opener.sock"
+fi | nc -U "$HOME/.panboticon/run/opener/$OPENER_SOCKET_C.sock"
 EOF
     ssh "$NAME" sudo chmod +x "/usr/local/bin/xdg-open"
     ssh "$NAME" sudo ln -f -s "xdg-open" "/usr/local/bin/open"
@@ -116,26 +122,29 @@ EOF
         STATUS=1
         continue
     fi
-    ssh -b "$NAME" mkdir -p "/home/$PANBOTICON_BOT_USER/bin" "/home/$PANBOTICON_BOT_USER/.panboticon"
-    scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_LIB/gh" "$PANBOTICON_BOT_USER@$NAME:bin/gh"
-    scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_LIB/panboticon-git-credential" "$PANBOTICON_BOT_USER@$NAME:bin/panboticon-git-credential"
+    ssh "$NAME" mkdir -p ".panboticon"
+    ssh "$NAME" mkdir -m 0700 -p ".panboticon/run/control"
+    ssh -b "$NAME" mkdir -p ".panboticon/bin" ".panboticon/etc/github-app" "bin"
+    ssh -b "$NAME" mkdir -m 0750 -p ".panboticon/run/control"
+    scp -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" "$PANBOTICON_LIB/gh" "$PANBOTICON_BOT_USER@$NAME:bin/gh"
+    scp -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" "$PANBOTICON_LIB/git-credential-helper" "$PANBOTICON_BOT_USER@$NAME:.panboticon/bin/git-credential-helper"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
-    ssh -b "$NAME" sh -c "'"'tee "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_id.txt"'" >"/dev/null"'"'"
+    ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/id.txt"'" >"/dev/null"'"'"
     echo "$PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS" |
-    ssh -b "$NAME" sh -c "'"'tee "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_installations.json"'" >"/dev/null"'"'"
-    ssh -b "$NAME" sh -c "'"'touch "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"'"'"'"
-    ssh -b "$NAME" sh -c "'"'chmod 600 "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"'"'"'"
+    ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/installations.json"'" >"/dev/null"'"'"
+    ssh -b "$NAME" sh -c "'"'touch "'".panboticon/etc/github-app/private-key.pem"'"'"'"
+    ssh -b "$NAME" sh -c "'"'chmod 0640 "'".panboticon/etc/github-app/private-key.pem"'"'"'"
     if [ -f "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" ]
-    then scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$PANBOTICON_BOT_USER@$NAME:.panboticon/github_app_private_key.pem"
+    then scp -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$PANBOTICON_BOT_USER@$NAME:.panboticon/etc/github-app/private-key.pem"
     elif echo "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" | grep -q "^op://"
     then
         op read "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" |
-        ssh -b "$NAME" sh -c "'"'tee "'"/home/$PANBOTICON_BOT_USER/.panboticon/github_app_private_key.pem"'" >"/dev/null"'"'"
+        ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/private-key.pem"'" >"/dev/null"'"'"
     else
         echo "Could not find the GitHub App private key $PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY. The bot user will not have GitHub access yet." >&2
         STATUS=1
     fi
-    ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!'"/home/$PANBOTICON_BOT_USER/bin/panboticon-git-credential'"
+    ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!'"~/.panboticon/bin/git-credential-helper'"
     ssh -b "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh -b "$NAME" git config --global "credential.https://github.com.username" "x-access-token"
     ssh -b "$NAME" git config --global "init.defaultBranch" "main"
@@ -147,27 +156,35 @@ EOF
 
     # Install OpenCode and Pi. Put them in a Swamp.
     echo "Installing the OpenCode and Pi agent harnesses in a Swamp..." >&2
-    ssh "$NAME" which "node" \|\| curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
-    ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-    ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-    ssh "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
-    ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
-    ssh "$NAME" "\$HOME/.local/bin/swamp" update \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_HUMAN_USER/.local/bin"
-    ssh -b "$NAME" "\$HOME/.local/bin/swamp" update \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_BOT_USER/.local/bin"
+    ssh "$NAME" which "node" 2\>"/dev/null" \|\| curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
+    ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade 2\>"/dev/null" \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
+    ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade 2\>"/dev/null" \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
+    ssh "$NAME" "\$HOME/.local/bin/pi" update --all 2\>"/dev/null" \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
+    ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all 2\>"/dev/null" \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
+    ssh "$NAME" "\$HOME/.local/bin/swamp" update 2\>"/dev/null" \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_HUMAN_USER/.local/bin"
+    ssh -b "$NAME" "\$HOME/.local/bin/swamp" update 2\>"/dev/null" \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_BOT_USER/.local/bin"
     echo "... Done!" >&2
 
     # Run additional configured bootstrapping programs for both human and bot.
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
     then
         echo "Running custom bootstrapping program $PANBOTICON_HUMAN_BOOTSTRAP for the human user, $PANBOTICON_HUMAN_USER..." >&2
-        scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" -r "$HOME/.gnupg" "$PANBOTICON_HUMAN_USER@$NAME:" # XXX HERE BE DRAGONS (surely this is just a bad idea but I don't have a better one)
+
+        # Copy the human user's GPG keyring to their home directory on the
+        # Panboticon instance so they can use it to sign commits.
+        #
+        # TODO As it is not great to copy a private key anywhere, remove this
+        # statement in favor of generating a GPG private key and using gh to
+        # add it to GitHub.
+        scp -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -r "$HOME/.gnupg" "$PANBOTICON_HUMAN_USER@$NAME:"
+
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
-        scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:panboticon-bootstrap.$EXT"
+        scp -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" "$PANBOTICON_HUMAN_BOOTSTRAP" "$PANBOTICON_HUMAN_USER@$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
-            "go") ssh -t "$NAME" go run "panboticon-bootstrap.$EXT";;
-            "py") ssh -t "$NAME" python "panboticon-bootstrap.$EXT";;
-            "rb") ssh -t "$NAME" ruby "panboticon-bootstrap.$EXT";;
-            *) ssh -t "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
+            "go") ssh -t "$NAME" go run ".panboticon/bootstrap.$EXT";;
+            "py") ssh -t "$NAME" python ".panboticon/bootstrap.$EXT";;
+            "rb") ssh -t "$NAME" ruby ".panboticon/bootstrap.$EXT";;
+            *) ssh -t "$NAME" "$EXT" ".panboticon/bootstrap.$EXT";;
         esac
         echo "... Done!" >&2
     fi
@@ -175,12 +192,12 @@ EOF
     then
         echo "Running custom bootstrapping program $PANBOTICON_BOT_BOOTSTRAP for the botuser, $PANBOTICON_BOT_USER..." >&2
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
-        scp -F "$HOME/.ssh/panboticon/$NAME.ssh_config" "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:panboticon-bootstrap.$EXT"
+        scp -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" "$PANBOTICON_BOT_BOOTSTRAP" "$PANBOTICON_BOT_USER@$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
-            "go") ssh -b -t "$NAME" go run "panboticon-bootstrap.$EXT";;
-            "py") ssh -b -t "$NAME" python "panboticon-bootstrap.$EXT";;
-            "rb") ssh -b -t "$NAME" ruby "panboticon-bootstrap.$EXT";;
-            *) ssh -b -t "$NAME" "$EXT" "panboticon-bootstrap.$EXT";;
+            "go") ssh -b -t "$NAME" go run ".panboticon/bootstrap.$EXT";;
+            "py") ssh -b -t "$NAME" python ".panboticon/bootstrap.$EXT";;
+            "rb") ssh -b -t "$NAME" ruby ".panboticon/bootstrap.$EXT";;
+            *) ssh -b -t "$NAME" "$EXT" ".panboticon/bootstrap.$EXT";;
         esac
         echo "... Done!" >&2
     fi
@@ -199,6 +216,6 @@ EOF
     fi
     echo "... Done!" >&2
 
-    echo "... All done!" >&2
+    echo "All done!" >&2
 done
 exit "$STATUS"

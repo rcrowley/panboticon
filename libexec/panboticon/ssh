@@ -38,15 +38,15 @@ if [ -z "$1" ]
 then
     boxen >"$TMP/boxen.txt"
     if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
-    then exec "$SSH" -F "$HOME/.ssh/panboticon/$(cat "$TMP/boxen.txt").ssh_config" -l "$USER" "$(cat "$TMP/boxen.txt")"
+    then exec "$SSH" -F "$HOME/.panboticon/etc/ssh_config/$(cat "$TMP/boxen.txt").ssh_config" -l "$USER" "$(cat "$TMP/boxen.txt")"
     else usage 1
     fi
 fi
 
 for A in "$@"
 do
-    if [ -f "$HOME/.ssh/panboticon/$A.ssh_config" ]
-    then exec "$SSH" -F "$HOME/.ssh/panboticon/$A.ssh_config" -l "$USER" "$@"
+    if [ -f "$HOME/.panboticon/etc/ssh_config/$A.ssh_config" ]
+    then exec "$SSH" -F "$HOME/.panboticon/etc/ssh_config/$A.ssh_config" -l "$USER" "$@"
     fi
 done
 echo "Could not find the name of a Panboticon instance with an SSH configuration amonst the arguments: $*" >&2

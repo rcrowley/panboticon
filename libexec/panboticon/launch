@@ -157,14 +157,19 @@ sed -E -i 's/^UMASK(\\t+)022$/UMASK\\1002/' "/etc/login.defs"
 sed -E -i 's/^# auth       sufficient pam_wheel.so trust$/auth       sufficient pam_wheel.so group=sudo trust/' "/etc/pam.d/su"
 echo "$PANBOTICON_HUMAN_USER ALL=(ALL) NOPASSWD:ALL" >"/etc/sudoers.d/$PANBOTICON_HUMAN_USER"
 
-echo "StreamLocalBindUnlink yes" >"/etc/ssh/sshd_config.d/panboticon.conf"
+cat >"/etc/ssh/sshd_config.d/panboticon.conf" <<EOF
+AcceptEnv OPENER_SOCKET_C
+StreamLocalBindUnlink yes
+EOF
 systemctl restart "ssh"
 install -d -m 0700 "/root/.ssh"
 cat >"/root/.ssh/authorized_keys" <<EOF
 $(cat "$TMP/authorized_keys")
 EOF
-install -d -g "$PANBOTICON_HUMAN_USER" -m 0700 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.ssh"
-install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.ssh"
+install -d -g "$PANBOTICON_HUMAN_USER" -m 0750 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.panboticon" "/home/$PANBOTICON_HUMAN_USER/.ssh"
+install -d -g "$PANBOTICON_HUMAN_USER" -m 0700 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.panboticon/run" "/home/$PANBOTICON_HUMAN_USER/.panboticon/run/opener"
+install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.panboticon" "/home/$PANBOTICON_BOT_USER/.ssh"
+install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.panboticon/run" "/home/$PANBOTICON_BOT_USER/.panboticon/run/opener"
 install -g "$PANBOTICON_HUMAN_USER" -m 0600 -o "$PANBOTICON_HUMAN_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_HUMAN_USER/.ssh"
 install -g "$PANBOTICON_BOT_USER" -m 0640 -o "$PANBOTICON_BOT_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_BOT_USER/.ssh" 
 chattr +i "/home/$PANBOTICON_BOT_USER/.ssh/authorized_keys"
@@ -176,6 +181,7 @@ INSTANCE_ID="$(
         --associate-public-ip-address \
         --block-device-mappings Ebs=\{VolumeSize=100\},DeviceName="/dev/sda1" \
         --image-id "$IMAGE_ID" \
+        --key-name "rcrowley-rsa" \
         --iam-instance-profile Name="$PANBOTICON_INSTANCE_PROFILE" \
         --instance-type "$PANBOTICON_INSTANCE_TYPE" \
         --security-group-ids "$SECURITY_GROUP_ID" \
@@ -197,24 +203,26 @@ do
     then break
     fi
 done
-mkdir -m"0700" -p "$HOME/.ssh/control" "$HOME/.ssh/panboticon"
-cat >"$HOME/.ssh/panboticon/$NAME.ssh_config" <<EOF
+mkdir -p "$HOME/.panboticon/etc/ssh_config"
+mkdir -m "0700" -p "$HOME/.panboticon/run/control"
+cat >"$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" <<EOF
 Host $NAME
     ControlMaster auto
-    ControlPath ~/.ssh/control/%C.sock
+    ControlPath ~/.panboticon/run/control/%C.sock
     ControlPersist 12h
     Hostname $INSTANCE_ID
     ProxyCommand aws ssm start-session --document-name AWS-StartSSHSession --parameters '{"portNumber":["%p"]}' --region $PANBOTICON_REGION --target %h
-    RemoteForward /home/%r/.opener.sock:%d/.opener.sock
+    RemoteForward /home/%r/.panboticon/run/opener/%C.sock:%d/.panboticon/run/opener.sock
     ServerAliveInterval 60
+    SetEnv OPENER_SOCKET_C="%C"
     SetEnv TERM="$PANBOTICON_TERM"
 EOF
 printf " $NAME ..." >&2
-until ssh -F "$HOME/.ssh/panboticon/$NAME.ssh_config" -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1
+until ssh -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1
 do
     sleep 2
     printf "." >&2
 done
-echo " Done! Login: \`ssh $NAME\`" >&2
+echo " Done! Login: \`panboticon ssh $NAME\`" >&2
 
 bootstrap "$NAME"
