@@ -130,10 +130,10 @@ EOF
     ssh "$NAME" mkdir -m 0700 -p ".panboticon/run/control"
     ssh -b "$NAME" mkdir -p ".panboticon/bin" ".panboticon/etc/github-app" "bin"
     ssh -b "$NAME" mkdir -m 0750 -p ".panboticon/run/control"
-    scp -b "$PANBOTICON_LIB/gh" "$NAME:bin/gh"
-    scp -b "$PANBOTICON_LIB/git" "$NAME:bin/git"
-    scp -b "$PANBOTICON_LIB/git-commit-verified" "$NAME:bin/git-commit-verified"
-    scp -b "$PANBOTICON_LIB/git-credential-helper" "$NAME:.panboticon/bin/git-credential-helper"
+    scp -b -q "$PANBOTICON_LIB/gh" "$NAME:bin/gh"
+    scp -b -q "$PANBOTICON_LIB/git" "$NAME:bin/git"
+    scp -b -q "$PANBOTICON_LIB/git-commit-verified" "$NAME:bin/git-commit-verified"
+    scp -b -q "$PANBOTICON_LIB/git-credential-helper" "$NAME:.panboticon/bin/git-credential-helper"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
     ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/id.txt"'" >"/dev/null"'"'"
     echo "$PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS" |
@@ -141,7 +141,7 @@ EOF
     ssh -b "$NAME" sh -c "'"'touch "'".panboticon/etc/github-app/private-key.pem"'"'"'"
     ssh -b "$NAME" sh -c "'"'chmod 0640 "'".panboticon/etc/github-app/private-key.pem"'"'"'"
     if [ -f "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" ]
-    then scp -b "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$NAME:.panboticon/etc/github-app/private-key.pem"
+    then scp -b -q "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$NAME:.panboticon/etc/github-app/private-key.pem"
     elif echo "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" | grep -q "^op://"
     then
         op read "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" |
@@ -182,10 +182,10 @@ EOF
         # TODO As it is not great to copy a private key anywhere, remove this
         # statement in favor of generating a GPG private key and using gh to
         # add it to GitHub.
-        scp -r "$HOME/.gnupg" "$NAME:"
+        scp -q -r "$HOME/.gnupg" "$NAME:"
 
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
-        scp "$PANBOTICON_HUMAN_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
+        scp -q "$PANBOTICON_HUMAN_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
             "go") ssh -t "$NAME" go run ".panboticon/bootstrap.$EXT";;
             "py") ssh -t "$NAME" python ".panboticon/bootstrap.$EXT";;
@@ -198,7 +198,7 @@ EOF
     then
         echo "Running custom bootstrapping program $PANBOTICON_BOT_BOOTSTRAP for the botuser, $PANBOTICON_BOT_USER..." >&2
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
-        scp -b "$PANBOTICON_BOT_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
+        scp -b -q "$PANBOTICON_BOT_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
             "go") ssh -b -t "$NAME" go run ".panboticon/bootstrap.$EXT";;
             "py") ssh -b -t "$NAME" python ".panboticon/bootstrap.$EXT";;
