@@ -160,17 +160,6 @@ EOF
     ssh -b "$NAME" git config --global "user.name" "$PANBOTICON_BOT_USER\[bot\]"
     echo "... Done!" >&2
 
-    # Install OpenCode and Pi. Put them in a Swamp.
-    echo "Installing the OpenCode and Pi agent harnesses in a Swamp..." >&2
-    ssh "$NAME" which "node" 2\>"/dev/null" \|\| curl -s "https://nodejs.org/dist/v$PANBOTICON_NODEJS_VERSION/node-v$PANBOTICON_NODEJS_VERSION-linux-$PANBOTICON_NODEJS_ARCH.tar.xz" \| sudo tar --exclude "CHANGELOG.md" --exclude "LICENSE" --exclude "README.md" --strip-components 1 -x -J -C "/usr/local"
-    ssh "$NAME" "\$HOME/.opencode/bin/opencode" upgrade 2\>"/dev/null" \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-    ssh -b "$NAME" "\$HOME/.opencode/bin/opencode" upgrade 2\>"/dev/null" \|\| curl -L -S -f -s "https://opencode.ai/install" \| bash -s -- --no-modify-path
-    ssh "$NAME" "\$HOME/.local/bin/pi" update --all 2\>"/dev/null" \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
-    ssh -b "$NAME" "\$HOME/.local/bin/pi" update --all 2\>"/dev/null" \|\| curl -L -S -f -s "https://pi.dev/install.sh" \| setsid sh
-    ssh "$NAME" "\$HOME/.local/bin/swamp" update 2\>"/dev/null" \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_HUMAN_USER/.local/bin"
-    ssh -b "$NAME" "\$HOME/.local/bin/swamp" update 2\>"/dev/null" \|\| curl -L -S -f -s "https://swamp-club.com/install.sh" \| sh -s -- -d "/home/$PANBOTICON_BOT_USER/.local/bin"
-    echo "... Done!" >&2
-
     # Run additional configured bootstrapping programs for both human and bot.
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
     then
