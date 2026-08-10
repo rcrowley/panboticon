@@ -81,13 +81,20 @@ do
     # need to let the bot run wild in its cell.
     ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "netcat-openbsd" "screen" "tmux"
 
-    # Deny access to the EC2 IMDS before any human or bot user code runs.
-    if ! ssh "$NAME" sudo iptables-save | grep -F -e "-A OUTPUT -d 169.254.169.254/32 -m owner --uid-owner 10101 -j REJECT" -q
-    then ssh "$NAME" sudo iptables -I OUTPUT -d "169.254.169.254/32" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
-    fi
-    if ! ssh "$NAME" sudo ip6tables-save | grep -F -e "-A OUTPUT -d fd00:ec2::254/128 -m owner --uid-owner 10101 -j REJECT" -q
-    then ssh "$NAME" sudo ip6tables -I OUTPUT -d "fd00:ec2::254/128" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
-    fi
+    # Deny the bot user access to the certain CIDR prefixes. We do this early
+    # to prevent abuses by the custom bot bootstrap program.
+    echo "$PANBOTICON_BOT_REJECT_CIDR_PREFIXES" |
+    jq -e -r '.[]' |
+    while read CIDR_PREFIX
+    do
+        SIX=
+        if echo "$PREFIX" | grep -q ':'
+        then SIX=6
+        fi
+        if ! ssh "$NAME" sudo ip${SIX}tables-save | grep -F -e "-A OUTPUT -d $CIDR_PREFIX -m owner --uid-owner 10101 -j REJECT" -q
+        then ssh "$NAME" sudo ip${SIX}tables -I OUTPUT -d "$CIDR_PREFIX" -m owner --uid-owner "$PANBOTICON_BOT_USER" -j REJECT
+        fi
+    done
 
     # Wire up the ability to open browser tabs on the human user's laptop from
     # inside a Panboticon instance.
@@ -201,9 +208,8 @@ EOF
         echo "... Done!" >&2
     fi
 
-    # Save the iptables(8) rules that deny the bot user access to the EC2 IMDS
-    # and rules added by Docker, Tailscale, or whatever else the configured
-    # bootstrapping programs installed.
+    # Save the iptables(8) rules. We do this late because there may be more
+    # rules than just the ones added via PANBOTICON_BOT_REJECT_CIDR_PREFIXES.
     #
     # Make sure auditd is running and alert the user if it's not.
     echo "Finishing bootstrapping Panboticon instance $NAME..." >&2

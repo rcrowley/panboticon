@@ -13,6 +13,9 @@
     "#": "AWS subnet ID where Panboticon instances are launched. If this is specified, it must be in PANBOTICON_VPC_ID. If this is not specified, a suitable subnet in PANBOTICON_VPC_ID and PANBOTICON_AZ is chosen.",
     "PANBOTICON_SUBNET_ID": "",
 
+    "#": "CIDR prefixes that should reject the bot user's connections (via iptables).",
+    "PANBOTICON_BOT_REJECT_CIDR_PREFIXES": ["169.254.169.254/32", "fd00:ec2::254/128"],
+
     "#": "AWS IAM instance profile for Panboticon instances. This is how you'll give your Panboticon instance access to use AWS APIs. The instance profile's role must attach the AmazonSSMManagedInstanceCore policy.",
     "PANBOTICON_IAM_INSTANCE_PROFILE": "",
 
