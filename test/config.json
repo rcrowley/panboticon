@@ -10,9 +10,13 @@
     "PANBOTICON_HUMAN_USER": "rcrowley",
     "PANBOTICON_BOT_USER": "rbotley",
     "PANBOTICON_HUMAN_EMAIL": "rcrowley@rcrowley.org",
-    "PANBOTICON_BOT_EMAIL": "rbotley@rcrowley.org",
+    "PANBOTICON_BOT_GITHUB_APP_ID": "1234567",
+    "PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS": [{"INSTALLATION_ID": "12345678", "ORGANIZATION": "example"}],
+    "PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY": "private-key.pem",
     "PANBOTICON_HUMAN_SHELL": "/bin/zsh",
     "PANBOTICON_BOT_SHELL": "/bin/bash",
+    "PANBOTICON_TERM": "xterm-256color",
+    "PANBOTICON_BOT_REJECT_CIDR_PREFIXES": ["169.254.169.254/32", "fd00:ec2::254/128"],
     "PANBOTICON_HUMAN_BOOTSTRAP": "bootstrap.sh",
     "PANBOTICON_BOT_BOOTSTRAP": ""
 }
