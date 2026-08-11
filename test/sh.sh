@@ -32,6 +32,7 @@ EOF
     diff -u "$TMP/hi-false.stdout" - <<EOF
 EOF
     diff -u "$TMP/hi-false.stderr" - <<EOF
+
 hi
 EOF
 )

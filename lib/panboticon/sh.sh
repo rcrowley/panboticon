@@ -8,6 +8,7 @@ sh_q() {
     set -e
     if [ "$_SH_Q_STATUS" -ne 0 ]
     then
+        echo >&2
         cat "$_SH_Q_TMP" >&2
         rm -f "$_SH_Q_TMP"
         return "$_SH_Q_STATUS"
