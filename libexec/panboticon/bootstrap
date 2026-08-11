@@ -173,7 +173,8 @@ EOF
         # TODO As it is not great to copy a private key anywhere, remove this
         # statement in favor of generating a GPG private key and using gh to
         # add it to GitHub.
-        scp -q -r "$HOME/.gnupg" "$NAME:"
+        scp -q -r "$HOME/.gnupg" "$NAME:" 2>"$TMP/scp-gnupg.txt"
+        grep -E -v 'S\.[^:]+: not a regular file' "$TMP/scp-gnupg.txt" >&2 || :
 
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
         scp -q "$PANBOTICON_HUMAN_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
