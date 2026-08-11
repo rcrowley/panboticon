@@ -42,10 +42,11 @@ then
 fi
 
 VERIFIER_BRANCH="panboticon-verifier-$COMMIT"
-if ! git push origin "HEAD:$VERIFIER_BRANCH" >"/dev/null"
+if ! git push "origin" "HEAD:refs/heads/$VERIFIER_BRANCH" >"$TMP/push.txt" 2>&1
 then
     echo "failed to push to GitHub" >&2
-    git reset --soft "HEAD~1" >"/dev/null"
+    cat "$TMP/push.txt" >&2
+    git reset -q --soft "HEAD~1" >"/dev/null"
     exit 1
 fi
 
@@ -58,7 +59,7 @@ jq \
         jq -s '.'
     )" \
     --arg tree "$TREE" \
-    -n \
+    -e -n \
     '{message: $msg, parents: $parents, tree: $tree}' >"$TMP/POST-commits.req.json"
 if ! curl \
     -H "Accept: application/vnd.github+json" \
@@ -77,15 +78,15 @@ then
         -X "DELETE" \
         -f -s \
         "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
-    git reset --soft "HEAD~1" >"/dev/null"
+    git reset -q --soft "HEAD~1"
     exit 1
 fi
-VERIFIED_COMMIT="$(jq -r '.sha' "$TMP/POST-commits.resp.json")"
+VERIFIED_COMMIT="$(jq -e -r '.sha' "$TMP/POST-commits.resp.json")"
 if [ -z "$VERIFIED_COMMIT" -o "$VERIFIED_COMMIT" = "null" ]
 then
     echo "failed to push commit via the GitHub API" >&2
     cat "$TMP/POST-commits.resp.json" >&2
-    git reset --soft "HEAD~1" >"/dev/null"
+    git reset -q --soft "HEAD~1"
     curl \
         -H "Authorization: Bearer $TOKEN" \
         -H "Accept: application/vnd.github+json" \
@@ -94,11 +95,10 @@ then
         "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
     exit 1
 fi
-VERIFIED="$(jq -r '.commit.verification.verified' "$TMP/POST-commits.resp.json")"
 
 jq \
     --arg sha "$VERIFIED_COMMIT" \
-    -n \
+    -e -n \
     '{sha: $sha, force: true}' >"$TMP/PATCH-refs.req.json"
 if ! curl \
     -H "Accept: application/vnd.github+json" \
@@ -107,11 +107,15 @@ if ! curl \
     -X "PATCH" \
     -d @"$TMP/PATCH-refs.req.json" \
     -f -s \
-    "https://api.github.com/repos/$REPO/git/refs/heads/$BRANCH" >"/dev/null"
+    "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"$TMP/PATCH-refs.resp.json"
 then
     echo "failed to update branch ref" >&2
+    cat "$TMP/PATCH-refs.resp.json" >&2
     exit 1
 fi
+
+git fetch -q "origin" "$VERIFIER_BRANCH"
+git reset --hard -q "origin/$VERIFIER_BRANCH"
 
 curl \
     -H "Accept: application/vnd.github+json" \
@@ -119,6 +123,3 @@ curl \
     -X "DELETE" \
     -f -s \
     "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
-
-git fetch origin "$BRANCH" >"/dev/null"
-git reset --hard "origin/$BRANCH" >"/dev/null"
