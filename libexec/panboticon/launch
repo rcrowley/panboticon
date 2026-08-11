@@ -147,11 +147,12 @@ sudo augenrules --load
 sudo auditctl -l
 sudo auditctl -s
 
+groupadd -g 988 "docker"
 groupadd -g 1234 "$PANBOTICON_HUMAN_USER"
 groupadd -g 10101 "$PANBOTICON_BOT_USER"
 
-useradd -G adm,sudo,10101 -d "/home/$PANBOTICON_HUMAN_USER" -g 1234 -m -s "$PANBOTICON_HUMAN_SHELL" -u 1234 "$PANBOTICON_HUMAN_USER"
-useradd -d "/home/$PANBOTICON_BOT_USER" -g 10101 -m -s "$PANBOTICON_BOT_SHELL" -u 10101 "$PANBOTICON_BOT_USER"
+useradd -G adm,docker,sudo,10101 -d "/home/$PANBOTICON_HUMAN_USER" -g 1234 -m -s "$PANBOTICON_HUMAN_SHELL" -u 1234 "$PANBOTICON_HUMAN_USER"
+useradd -d "/home/$PANBOTICON_BOT_USER" -g docker,10101 -m -s "$PANBOTICON_BOT_SHELL" -u 10101 "$PANBOTICON_BOT_USER"
 
 sed -E -i 's/^UMASK(\\t+)022$/UMASK\\1002/' "/etc/login.defs"
 sed -E -i 's/^# auth       sufficient pam_wheel.so trust$/auth       sufficient pam_wheel.so group=sudo trust/' "/etc/pam.d/su"
