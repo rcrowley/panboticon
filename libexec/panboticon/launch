@@ -181,7 +181,6 @@ INSTANCE_ID="$(
         --associate-public-ip-address \
         --block-device-mappings Ebs=\{VolumeSize=100\},DeviceName="/dev/sda1" \
         --image-id "$IMAGE_ID" \
-        --key-name "rcrowley-rsa" \
         --iam-instance-profile Name="$PANBOTICON_INSTANCE_PROFILE" \
         --instance-type "$PANBOTICON_INSTANCE_TYPE" \
         --security-group-ids "$SECURITY_GROUP_ID" \
