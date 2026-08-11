@@ -25,6 +25,8 @@ if [ -z "$1" ]
 then usage 1
 fi
 
+. "$PANBOTICON_LIB/sh.sh"
+
 # Install the local opener service (from rcrowley's fork of opener to get the
 # directory-of-control-sockets variant of jomiller's auto-forwarding patch) to
 # catch URLs from the remote xdg-open stand-in.
@@ -79,7 +81,7 @@ do
 
     # Install gh, iptables-persistent, screen, and tmux - almost everything we
     # need to let the bot run wild in its cell.
-    ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "netcat-openbsd" "screen" "tmux"
+    sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "netcat-openbsd" "screen" "tmux"
 
     # Deny the bot user access to the certain CIDR prefixes. We do this early
     # to prevent abuses by the custom bot bootstrap program.
@@ -202,11 +204,11 @@ EOF
     #
     # Make sure auditd is running and alert the user if it's not.
     echo "Finishing bootstrapping Panboticon instance $NAME..." >&2
-    ssh "$NAME" sudo netfilter-persistent save
+    sh_q ssh "$NAME" sudo netfilter-persistent save
     if ! ssh "$NAME" sudo systemctl status "auditd" >"/dev/null" 2>"/dev/null"
     then
-        ssh "$NAME" sudo systemctl start "auditd"
-        ssh "$NAME" sudo systemctl status "auditd"
+        sh_q ssh "$NAME" sudo systemctl start "auditd"
+        sh_q ssh "$NAME" sudo systemctl status "auditd"
     fi
     echo "... Done!" >&2
 
