@@ -3,8 +3,8 @@
 set -e
 
 usage() {
-    printf "Usage: panboticon bootstrap \e[4mname\e[0m [\e[4m...\e[0m]\n" >&2
-    printf "  \e[4mname\e[0m  name of the Panboticon instance to bootstrap\n" >&2
+    printf "Usage: panboticon bootstrap \e[4mname\e[0m[\e[4m...\e[0m]\n" >&2
+    printf "  \e[4mname\e[0m  name of the Panboticon instance to bootstrap (may be repeated)\n" >&2
     exit "$1"
 }
 

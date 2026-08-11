@@ -4,8 +4,9 @@ set -e
 
 usage() {
     printf "Usage: panboticon ssh [-b] [\e[4m...\e[0m] [\e[4mname\e[0m] [\e[4m...\e[0m]\n" >&2
-    printf "  -b        SSH as the bot user instead of the human user\n" >&2
+    printf "  -b    SSH as the bot user instead of the human user\n" >&2
     printf "  \e[4mname\e[0m  name of the Panboticon instance to SSH to (inferred from \`panboticon boxen\` if not given and there's only one)\n" >&2
+    printf "  \e[4m...\e[0m   additional options from ssh(1), including optionally ending with a command and arguments\n" >&2
     exit "$1"
 }
 

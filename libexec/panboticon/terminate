@@ -6,7 +6,7 @@ usage() {
     printf "Usage: panboticon terminate [-f] [-r \e[4mregion\e[0m] \e[4mname-or-instance-id\e[0m[\e[4m...\e[0m]\n" >&2
     printf "  -f                   force termination without confirmation\n" >&2
     printf "  -r \e[4mregion\e[0m            AWS region (required if not specified in $PANBOTICON_CONFIG or the environment)\n" >&2
-    printf "  \e[4mname-or-instance-id\e[0m  AWS EC2 instance Name tag or ID to terminate\n" >&2
+    printf "  \e[4mname-or-instance-id\e[0m  AWS EC2 instance Name tag or ID to terminate (may be repeated)\n" >&2
     exit "$1"
 }
 
