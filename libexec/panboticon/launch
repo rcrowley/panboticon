@@ -212,10 +212,10 @@ Host $NAME
     ControlPersist 12h
     Hostname $INSTANCE_ID
     ProxyCommand aws ssm start-session --document-name AWS-StartSSHSession --parameters '{"portNumber":["%p"]}' --region $PANBOTICON_REGION --target %h
-    RemoteForward /home/%r/.panboticon/run/opener/%C.sock:%d/.panboticon/run/opener.sock
+    RemoteForward /home/%r/.panboticon/run/opener/%C.sock %d/.panboticon/run/opener.sock
     ServerAliveInterval 20
-    SetEnv OPENER_SOCKET_C="%C"
-    SetEnv TERM="$PANBOTICON_TERM"
+    SetEnv OPENER_SOCKET_C=%C
+    SetEnv TERM=$PANBOTICON_TERM
 EOF
 printf " $NAME ..." >&2
 until ssh -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -o ConnectTimeout=2 -o StrictHostKeyChecking="no" "$NAME" : >"/dev/null" 2>&1
