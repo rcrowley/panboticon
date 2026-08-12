@@ -213,7 +213,7 @@ Host $NAME
     Hostname $INSTANCE_ID
     ProxyCommand aws ssm start-session --document-name AWS-StartSSHSession --parameters '{"portNumber":["%p"]}' --region $PANBOTICON_REGION --target %h
     RemoteForward /home/%r/.panboticon/run/opener/%C.sock:%d/.panboticon/run/opener.sock
-    ServerAliveInterval 60
+    ServerAliveInterval 20
     SetEnv OPENER_SOCKET_C="%C"
     SetEnv TERM="$PANBOTICON_TERM"
 EOF
