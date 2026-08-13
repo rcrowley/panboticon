@@ -1,0 +1,71 @@
+#!/bin/sh
+
+set -e
+
+usage() {
+    printf "Usage: panboticon reboot [-r \e[4mregion\e[0m] \e[4mname-or-instance-id\e[0m[\e[4m...\e[0m]\n" >&2
+    printf "  -r \e[4mregion\e[0m            AWS region (required if not specified in $PANBOTICON_CONFIG or the environment)\n" >&2
+    printf "  \e[4mname-or-instance-id\e[0m  AWS EC2 instance Name tag or ID to reboot (may be repeated)\n" >&2
+    exit "$1"
+}
+
+if [ "$(basename "$0")" = "$1" ]
+then shift
+fi
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+
+        "-r"|"--region") PANBOTICON_REGION="$2" shift 2;;
+        "-r"*) PANBOTICON_REGION="$(echo "$1" | cut -c"3-")" shift;;
+        "--region="*) PANBOTICON_REGION="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-h"|"--help") usage 0;;
+
+        *) break;;
+
+    esac
+done
+if [ -z "$1" ]
+then usage 1
+fi
+
+. "$PANBOTICON_LIB/aws.sh"
+. "$PANBOTICON_LIB/sh.sh"
+
+while [ "$#" -gt 0 ]
+do
+
+    if [ -f "$HOME/.panboticon/etc/ssh_config/$1.ssh_config" ]
+    then awk '/^    Hostname i-/ {print $2}' "$HOME/.panboticon/etc/ssh_config/$1.ssh_config"
+
+    elif echo "$1" | grep -q "^i-"
+    then echo "$1"
+
+    else
+        aws ec2 describe-instances --filters \
+            Name="ip-address",Values="$1" |
+        jq -r '.Reservations[].Instances[].InstanceId'
+
+    fi
+    shift
+done |
+while read INSTANCE_ID
+do
+    STATE="$(
+        aws ec2 describe-instances \
+            --instance-ids "$INSTANCE_ID" \
+            --output "text" \
+            --query 'Reservations[0].Instances[0].State.Name'
+    )"
+    case "$STATE" in
+        "stopped")
+            printf "Starting $INSTANCE_ID ..." >&2
+            sh_q aws ec2 start-instances --instance-ids "$INSTANCE_ID"
+            echo " Done!" >&2;;
+        *)
+            printf "Rebooting $STATE instance $INSTANCE_ID ..." >&2
+            sh_q aws ec2 reboot-instances --instance-ids "$INSTANCE_ID"
+            echo " Done!" >&2;;
+    esac
+done
