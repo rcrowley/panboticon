@@ -137,7 +137,7 @@ space_left = 10
 space_left_action = SYSLOG
 EOF
 cat >"/etc/audit/rules.d/panboticon.rules" <<EOF
--a always,exit -F arch=b32 -S accept,accept4,connect,execve,listen
+-a always,exit -F arch=b32 -S $([ "$PANBOTICON_AWS_ARCH" = "arm64" ] && echo "accept," || :)accept4,connect,execve,listen
 -a always,exit -F arch=b64 -S accept,accept4,connect,execve,listen
 -e 2
 EOF
