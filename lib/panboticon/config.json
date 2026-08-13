@@ -45,5 +45,8 @@
     "PANBOTICON_HUMAN_BOOTSTRAP": "",
     "PANBOTICON_BOT_BOOTSTRAP": "",
 
+    "#": "Slack incoming webhook URL humans and bots alike can use to send messages to Slack. See <https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/>. Will be made available in the environment of PANBOTICON_HUMAN_BOOTSTRAP and PANBOTICON_BOT_BOOTSTRAP so you can stash it wherever you like.",
+    "PANBOTICON_SLACK_INCOMING_WEBHOOK_URL": "",
+
     "#": "This comment allows all the lines above to have trailing commas."
 }

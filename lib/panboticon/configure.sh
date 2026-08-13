@@ -28,7 +28,8 @@ export PANBOTICON_CONFIG
         PANBOTICON_BOT_SHELL \
         PANBOTICON_TERM \
         PANBOTICON_HUMAN_BOOTSTRAP \
-        PANBOTICON_BOT_BOOTSTRAP
+        PANBOTICON_BOT_BOOTSTRAP \
+        PANBOTICON_SLACK_INCOMING_WEBHOOK_URL
 
     do
         printf "$COMMA\n    \": \${$V:=\\\\\"\\(.$V // \"\")\\\\\"}\"" >&3

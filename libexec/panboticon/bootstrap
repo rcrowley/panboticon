@@ -179,10 +179,11 @@ EOF
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
         scp -q "$PANBOTICON_HUMAN_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
-            "go") ssh -t "$NAME" go run ".panboticon/bootstrap.$EXT";;
-            "py") ssh -t "$NAME" python ".panboticon/bootstrap.$EXT";;
-            "rb") ssh -t "$NAME" ruby ".panboticon/bootstrap.$EXT";;
-            *) ssh -t "$NAME" "$EXT" ".panboticon/bootstrap.$EXT";;
+            "go") ssh -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" go run ".panboticon/bootstrap.$EXT";;
+            "pl") ssh -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" perl ".panboticon/bootstrap.$EXT";;
+            "py") ssh -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" python ".panboticon/bootstrap.$EXT";;
+            "rb") ssh -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" ruby ".panboticon/bootstrap.$EXT";;
+            *) ssh -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" "$EXT" ".panboticon/bootstrap.$EXT";;
         esac
         echo "... Done!" >&2
     fi
@@ -192,10 +193,11 @@ EOF
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
         scp -b -q "$PANBOTICON_BOT_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
-            "go") ssh -b -t "$NAME" go run ".panboticon/bootstrap.$EXT";;
-            "py") ssh -b -t "$NAME" python ".panboticon/bootstrap.$EXT";;
-            "rb") ssh -b -t "$NAME" ruby ".panboticon/bootstrap.$EXT";;
-            *) ssh -b -t "$NAME" "$EXT" ".panboticon/bootstrap.$EXT";;
+            "go") ssh -b -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" go run ".panboticon/bootstrap.$EXT";;
+            "pl") ssh -b -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" perl ".panboticon/bootstrap.$EXT";;
+            "py") ssh -b -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" python ".panboticon/bootstrap.$EXT";;
+            "rb") ssh -b -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" ruby ".panboticon/bootstrap.$EXT";;
+            *) ssh -b -t "$NAME" env PANBOTICON_SLACK_INCOMING_WEBHOOK_URL="$PANBOTICON_SLACK_INCOMING_WEBHOOK_URL" "$EXT" ".panboticon/bootstrap.$EXT";;
         esac
         echo "... Done!" >&2
     fi
