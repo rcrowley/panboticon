@@ -186,7 +186,7 @@ INSTANCE_ID="$(
         --instance-type "$PANBOTICON_INSTANCE_TYPE" \
         --security-group-ids "$SECURITY_GROUP_ID" \
         --subnet-id "$PANBOTICON_SUBNET_ID" \
-        --tag-specifications ResourceType="instance",Tags=\[\{Key="Manager",Value="Panboticon"\},\{Key="Name",Value="$NAME"\}\] \
+        --tag-specifications ResourceType="instance",Tags=\[\{Key="Manager",Value="Panboticon"\},\{Key="Name",Value="$NAME"\},\{Key="Owner",Value="$USER"\}\] \
         --user-data "$(cat "$TMP/user-data.sh")" |
     jq -e -r '.Instances[].InstanceId'
 )"

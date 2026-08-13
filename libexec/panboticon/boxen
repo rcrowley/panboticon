@@ -35,8 +35,9 @@ done
 . "$PANBOTICON_LIB/aws.sh"
 
 aws ec2 describe-instances --filters \
-    Name="instance-state-name",Values="running" \
-    Name="tag:Manager",Values="Panboticon" |
+    Name="instance-state-name",Values="running,stopped" \
+    Name="tag:Manager",Values="Panboticon" \
+    Name="tag:Owner",Values="$USER" |
 case "$FORMAT" in
     "all") exec jq -e -r '.Reservations[].Instances[] | "\(.Tags[] | select(.Key == "Name").Value) \(.PublicIpAddress) \(.InstanceId)"';;
     "id") exec jq -e -r '.Reservations[].Instances[].InstanceId';;
