@@ -64,6 +64,6 @@ TODO
 
 No commitment, just ideas.
 
-* Give it a Slack incoming webhook so it can ask its human for input.
 * Give it a whole Slack App so it can ask its human for input and the human can respond in Slack.
+* Poll GitHub and Slack for work to do and then, you know, do it.
 * Give it an email address via Amazon SES. Configure it to periodically check its mail and prompt a sub-agent (or just a `tmux new-window`) to process each new message.
