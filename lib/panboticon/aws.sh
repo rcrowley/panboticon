@@ -20,6 +20,12 @@ then
 fi
 export AWS_REGION="$PANBOTICON_REGION"
 
+PANBOTICON_AWS_ARCH="x86_64" PANBOTICON_UBUNTU_ARCH="amd64"
+if echo "$PANBOTICON_INSTANCE_TYPE" | cut -d "." -f 1 | grep -q "[0-9]g"
+then PANBOTICON_AWS_ARCH="arm64" PANBOTICON_UBUNTU_ARCH="arm64"
+fi
+export PANBOTICON_AWS_ARCH PANBOTICON_UBUNTU_ARCH
+
 aws_vpc_subnet() {
     if [ -z "$PANBOTICON_VPC_ID" ]
     then

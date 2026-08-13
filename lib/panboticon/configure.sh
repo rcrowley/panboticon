@@ -47,12 +47,6 @@ grep -E "^: \\\$\\{PANBOTICON_[_0-9A-Z]+:=\"[-./_~@0-9:A-Za-z]*\"\\}\$" >"$TMP/c
 . "$TMP/config.sh"
 . "$TMP/export.sh"
 
-PANBOTICON_AWS_ARCH="x86_64" PANBOTICON_UBUNTU_ARCH="amd64"
-if echo "$PANBOTICON_INSTANCE_TYPE" | cut -d"." -f"1" | grep -q "[0-9]g"
-then PANBOTICON_AWS_ARCH="arm64" PANBOTICON_UBUNTU_ARCH="arm64"
-fi
-export PANBOTICON_AWS_ARCH PANBOTICON_UBUNTU_ARCH
-
 export PANBOTICON_OPENER_FORK="rcrowley" PANBOTICON_OPENER_VERSION="v0.1.7-rcrowley.0"
 export PANBOTICON_OPENER_ARCH="$(uname -m)" PANBOTICON_OPENER_OS="$(uname -s | tr "[:upper:]" "[:lower:]")"
 case "$PANBOTICON_OPENER_ARCH" in
