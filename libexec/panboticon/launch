@@ -127,7 +127,7 @@ done
 
 cat >"/etc/audit/auditd.conf" <<EOF
 admin_space_left = 1
-admin_space_left_action = HALT
+admin_space_left_action = SYSLOG
 log_file = /var/log/audit/audit.log
 log_format = ENRICHED
 max_log_file = 100
