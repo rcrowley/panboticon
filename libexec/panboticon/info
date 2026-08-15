@@ -49,10 +49,10 @@ echo "Public IP address: $PUBLIC_IP"
 echo "Availability Zone: $AZ"
 
 echo
-ssh "$PANBOTICON_HUMAN_USER@$NAME" df -h "/"
+ssh "$NAME" df -h "/"
 
 echo
-ssh "$PANBOTICON_HUMAN_USER@$NAME" ps -o "user,pid,tty,time,comm" -u "$PANBOTICON_HUMAN_USER" || echo "(none)"
+ssh "$NAME" ps -o "user,pid,tty,time,comm" -u "$PANBOTICON_HUMAN_USER" || echo "(none)"
 
 echo
-ssh "$PANBOTICON_HUMAN_USER@$NAME" ps -o "user,pid,tty,time,comm" -u "$PANBOTICON_BOT_USER" || echo "(none)"
+ssh "$NAME" ps -o "user,pid,tty,time,comm" -u "$PANBOTICON_BOT_USER" || echo "(none)"
