@@ -62,6 +62,12 @@ fi
 . "$PANBOTICON_LIB/aws.sh"
 aws_vpc_subnet
 
+if info "$NAME" >"/dev/null"
+then
+    echo "There's already a Panboticon instance called $NAME in $PANBOTICON_REGION in this AWS account." >&2
+    exit 1
+fi
+
 printf "Selecting the right AMI ..." >&2
 IMAGE_ID="$(
     aws ec2 describe-images \
