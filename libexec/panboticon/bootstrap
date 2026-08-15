@@ -30,7 +30,7 @@ fi
 # Install the local opener service (from rcrowley's fork of opener to get the
 # directory-of-control-sockets variant of jomiller's auto-forwarding patch) to
 # catch URLs from the remote xdg-open stand-in.
-echo "Installing opener locally to open browser windows for OAuth flows on Panboticon instances ..." >&2
+printf "Installing opener locally to open browser windows for OAuth flows on Panboticon instances ..." >&2
 mkdir -p "$HOME/.panboticon/bin" "$HOME/.panboticon/etc" "$HOME/.panboticon/log" "$HOME/.panboticon/run"
 if [ ! -x "$HOME/.panboticon/bin/opener" ]
 then
@@ -64,7 +64,7 @@ address: ~/.panboticon/run/opener.sock
 EOF
 launchctl unload "$HOME/Library/LaunchAgents/panboticon-opener.plist" || :
 launchctl load "$HOME/Library/LaunchAgents/panboticon-opener.plist"
-echo "... Done!" >&2
+echo " Done!" >&2
 
 # Bootstrap each Panboticon instance given as an argument.
 STATUS=0
@@ -113,8 +113,8 @@ EOF
 
     # Authenticate the human user with GitHub.
     echo "Authenticating the human user, $PANBOTICON_HUMAN_USER, with GitHub ..." >&2
-    ssh "$NAME" gh auth status \|\| gh auth login
-    ssh "$NAME" git config --global "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
+    ssh -t "$NAME" gh auth status \|\| gh auth login
+    ssh "$NAME" git config --global --replace-all "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
     ssh "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh "$NAME" git config --global "user.email" "$PANBOTICON_HUMAN_EMAIL"
     echo "... Done!" >&2
