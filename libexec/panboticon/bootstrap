@@ -79,9 +79,36 @@ do
     fi
     echo "Bootstrapping Panboticon instance $NAME ..." >&2
 
-    # Install gh, iptables-persistent, screen, and tmux - almost everything we
-    # need to let the bot run wild in its cell.
-    sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "gh" "iptables-persistent" "netcat-openbsd" "screen" "tmux"
+    # Install Docker rootless, gh, iptables-persistent, screen, and tmux -
+    # almost everything we need to let the bot run wild in its cell.
+    ssh "$NAME" sudo install -m 0755 -d "/etc/apt/keyrings"
+    ssh "$NAME" sudo curl -L -S -f -o "/etc/apt/keyrings/docker.asc" -s "https://download.docker.com/linux/ubuntu/gpg"
+    ssh "$NAME" sudo sh -c "'"'. "/etc/os-release" && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME:-$VERSION_CODENAME} stable" >"/etc/apt/sources.list.d/docker.list"'"'"
+    sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get update
+    sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "containerd.io" "dbus-user-session" "docker-buildx-plugin" "docker-ce" "docker-ce-cli" "docker-ce-rootless-extras" "docker-compose-plugin" "fuse-overlayfs" "gh" "iptables-persistent" "netcat-openbsd" "screen" "slirp4netns" "tmux" "uidmap"
+    sh_q ssh "$NAME" sudo systemctl disable --now "containerd.service" "docker.service" "docker.socket" || :
+    ssh "$NAME" sudo rm -f "/var/run/docker.sock"
+    ssh "$NAME" sudo tee "/etc/apparmor.d/rootlesskit" >"/dev/null" <<'EOF'
+abi <abi/4.0>,
+include <tunables/global>
+/usr/bin/rootlesskit flags=(unconfined) {
+  userns,
+  include if exists <local/rootlesskit>
+}
+EOF
+    sh_q ssh "$NAME" sudo systemctl restart "apparmor.service" # XXX WHAT IS THIS REMOTE_USER THING? SHOULD IT RUN FOR BOTH?
+    ssh "$NAME" sudo sh -c "'"'grep -q "^'"$PANBOTICON_HUMAN_USER"':" "/etc/subuid" || echo "'"$PANBOTICON_HUMAN_USER"':$((100000 + 1234 * 65536)):65536" >>"/etc/subuid"'"'"
+    ssh "$NAME" sudo sh -c "'"'grep -q "^'"$PANBOTICON_BOT_USER"':" "/etc/subuid" || echo "'"$PANBOTICON_BOT_USER"':$((100000 + 10101 * 65536)):65536" >>"/etc/subuid"'"'"
+    ssh "$NAME" sudo loginctl enable-linger "$PANBOTICON_HUMAN_USER" "$PANBOTICON_BOT_USER"
+    sh_q ssh "$NAME" dockerd-rootless-setuptool.sh install
+    sh_q ssh -b "$NAME" dockerd-rootless-setuptool.sh install
+    ssh "$NAME" sudo tee "/usr/local/bin/docker" >"/dev/null" <<'EOF'
+#!/bin/sh
+set -e
+export DOCKER_HOST="${DOCKER_HOST:-unix:///run/user/$(id -u)/docker.sock}"
+exec /usr/bin/docker "$@"
+EOF
+    ssh "$NAME" sudo chmod +x "/usr/local/bin/docker"
 
     # Deny the bot user access to the certain CIDR prefixes. We do this early
     # to prevent abuses by the custom bot bootstrap program.
