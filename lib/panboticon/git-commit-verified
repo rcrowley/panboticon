@@ -2,7 +2,7 @@
 
 set -e
 
-git commit --no-gpg-sign "$@" >"/dev/null"
+git commit --no-gpg-sign "$@"
 
 TMP="$(mktemp -d)"
 trap "rm -f -r \"$TMP\"" EXIT
@@ -67,8 +67,10 @@ if ! curl \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     -X "POST" \
     -d @"$TMP/POST-commits.req.json" \
-    -f -s \
-    "https://api.github.com/repos/$REPO/git/commits" >"$TMP/POST-commits.resp.json"
+    -f \
+    -o "$TMP/POST-commits.resp.json" \
+    -s \
+    "https://api.github.com/repos/$REPO/git/commits"
 then
     echo "failed to push commit via the GitHub API" >&2
     cat "$TMP/POST-commits.resp.json" >&2
@@ -76,7 +78,8 @@ then
         -H "Accept: application/vnd.github+json" \
         -H "Authorization: Bearer $TOKEN" \
         -X "DELETE" \
-        -f -s \
+        -f \
+        -s \
         "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
     git reset -q --soft "HEAD~1"
     exit 1
@@ -91,7 +94,8 @@ then
         -H "Authorization: Bearer $TOKEN" \
         -H "Accept: application/vnd.github+json" \
         -X "DELETE" \
-        -f -s \
+        -f \
+        -s \
         "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
     exit 1
 fi
@@ -106,8 +110,10 @@ if ! curl \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     -X "PATCH" \
     -d @"$TMP/PATCH-refs.req.json" \
-    -f -s \
-    "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"$TMP/PATCH-refs.resp.json"
+    -f \
+    -o "$TMP/PATCH-refs.resp.json" \
+    -s \
+    "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH"
 then
     echo "failed to update branch ref" >&2
     cat "$TMP/PATCH-refs.resp.json" >&2
@@ -115,11 +121,14 @@ then
 fi
 
 git fetch -q "origin" "$VERIFIER_BRANCH"
+git stash >"/dev/null"
 git reset --hard -q "origin/$VERIFIER_BRANCH"
+git stash pop >"/dev/null"
 
 curl \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $TOKEN" \
     -X "DELETE" \
-    -f -s \
+    -f \
+    -s \
     "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null"
