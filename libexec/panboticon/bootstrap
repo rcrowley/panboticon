@@ -131,9 +131,15 @@ EOF
 #!/bin/sh
 set -e
 if [ "$1" ]
-then echo "$@"
-else cat
-fi | nc -U "$HOME/.panboticon/run/opener/$OPENER_SOCKET_C.sock"
+then
+    for URL in "$@"
+    do echo "$OPENER_SOCKET_C $URL"
+    done
+else
+    while read URL
+    do echo "$OPENER_SOCKET_C $URL"
+    done
+fi | nc -U "$HOME/.panboticon/run/opener.sock"
 EOF
     ssh "$NAME" sudo chmod +x "/usr/local/bin/xdg-open"
     ssh "$NAME" sudo ln -f -s "xdg-open" "/usr/local/bin/open"
