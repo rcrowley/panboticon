@@ -96,7 +96,7 @@ include <tunables/global>
   include if exists <local/rootlesskit>
 }
 EOF
-    sh_q ssh "$NAME" sudo systemctl restart "apparmor.service" # XXX WHAT IS THIS REMOTE_USER THING? SHOULD IT RUN FOR BOTH?
+    sh_q ssh "$NAME" sudo systemctl restart "apparmor.service"
     ssh "$NAME" sudo sh -c "'"'grep -q "^'"$PANBOTICON_HUMAN_USER"':" "/etc/subuid" || echo "'"$PANBOTICON_HUMAN_USER"':$((100000 + 1234 * 65536)):65536" >>"/etc/subuid"'"'"
     ssh "$NAME" sudo sh -c "'"'grep -q "^'"$PANBOTICON_BOT_USER"':" "/etc/subuid" || echo "'"$PANBOTICON_BOT_USER"':$((100000 + 10101 * 65536)):65536" >>"/etc/subuid"'"'"
     ssh "$NAME" sudo loginctl enable-linger "$PANBOTICON_HUMAN_USER" "$PANBOTICON_BOT_USER"
@@ -196,19 +196,22 @@ EOF
     echo "... Done!" >&2
 
     # Run additional configured bootstrapping programs for both human and bot.
+    if [ -f "$PANBOTICON_LOCAL_BOOTSTRAP" ]
+    then
+        echo "Running custom local bootstrapping program $PANBOTICON_LOCAL_BOOTSTRAP for Panboticon instance $NAME ..." >&2
+        EXT="${PANBOTICON_LOCAL_BOOTSTRAP##*.}"
+        case "$EXT" in
+            "go") go run "$PANBOTICON_LOCAL_BOOTSTRAP" "$NAME";;
+            "pl") perl "$PANBOTICON_LOCAL_BOOTSTRAP" "$NAME";;
+            "py") python "$PANBOTICON_LOCAL_BOOTSTRAP" "$NAME";;
+            "rb") ruby "$PANBOTICON_LOCAL_BOOTSTRAP" "$NAME";;
+            *) "$EXT" "$PANBOTICON_LOCAL_BOOTSTRAP" "$NAME";;
+        esac
+        echo "... Done!" >&2
+    fi
     if [ -f "$PANBOTICON_HUMAN_BOOTSTRAP" ]
     then
         echo "Running custom bootstrapping program $PANBOTICON_HUMAN_BOOTSTRAP for the human user, $PANBOTICON_HUMAN_USER..." >&2
-
-        # Copy the human user's GPG keyring to their home directory on the
-        # Panboticon instance so they can use it to sign commits.
-        #
-        # TODO As it is not great to copy a private key anywhere, remove this
-        # statement in favor of generating a GPG private key and using gh to
-        # add it to GitHub.
-        scp -q -r "$HOME/.gnupg" "$NAME:" 2>"$TMP/scp-gnupg.txt"
-        grep -E -v 'S\.[^:]+: not a regular file' "$TMP/scp-gnupg.txt" >&2 || :
-
         EXT="${PANBOTICON_HUMAN_BOOTSTRAP##*.}"
         scp -q "$PANBOTICON_HUMAN_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
