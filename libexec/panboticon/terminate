@@ -3,14 +3,15 @@
 set -e
 
 usage() {
-    printf "Usage: panboticon terminate [-f] [-r \e[4mregion\e[0m] \e[4mname-or-instance-id\e[0m[\e[4m...\e[0m]\n" >&2
-    printf "  -f                   force termination without confirmation\n" >&2
+    printf "Usage: panboticon terminate [-f] [-r \e[4mregion\e[0m] [-t] \e[4mname-or-instance-id\e[0m[\e[4m...\e[0m]\n" >&2
+    printf "  -f, --force          force termination without confirmation\n" >&2
     printf "  -r \e[4mregion\e[0m            AWS region (required if not specified in $PANBOTICON_CONFIG or the environment)\n" >&2
+    printf "  -t, --test           test whether termination would be safe (i.e. there aren't uncommitted changes in Git repositories) but do not terminate\n" >&2
     printf "  \e[4mname-or-instance-id\e[0m  AWS EC2 instance Name tag or ID to terminate (may be repeated)\n" >&2
     exit "$1"
 }
 
-FORCE=""
+FORCE="" TEST=""
 if [ "$(basename "$0")" = "$1" ]
 then shift
 fi
@@ -23,6 +24,8 @@ do
         "-r"|"--region") PANBOTICON_REGION="$2" shift 2;;
         "-r"*) PANBOTICON_REGION="$(echo "$1" | cut -c"3-")" shift;;
         "--region="*) PANBOTICON_REGION="$(echo "$1" | cut -d"=" -f"2-")" shift;;
+
+        "-t"|"--test") TEST="--test" shift;;
 
         "-h"|"--help") usage 0;;
 
@@ -39,7 +42,7 @@ fi
 while [ "$#" -gt 0 ]
 do
 
-    if [ -z "$FORCE" ]
+    if [ -z "$FORCE" -o "$TEST" ]
     then
         echo "Searching for uncommitted changes in Git repositories in ~$PANBOTICON_HUMAN_USER and ~$PANBOTICON_BOT_USER on $1 ..." >&2
         DIFF_HUMAN=0 DIFF_BOT=0
@@ -56,14 +59,17 @@ do
         if [ "$DIFF_BOT" = 1 ]
         then echo "There are uncommitted changes in Git repositories in ~$PANBOTICON_BOT_USER." >&2
         fi
-        printf "Are you sure you want to terminate $1? There is no undo. [yn] " >&2
-        read YESNO
-        case "$YESNO" in
-            "y"|"Y"|"yes"|"YES"|"Yes") ;;
-            *)
-                shift
-                continue;;
-        esac
+        if [ -z "$TEST" ]
+        then
+            printf "Are you sure you want to terminate $1? There is no undo. [yn] " >&2
+            read YESNO
+            case "$YESNO" in
+                "y"|"Y"|"yes"|"YES"|"Yes") ;;
+                *)
+                    shift
+                    continue;;
+            esac
+        fi
     fi
 
     if [ -f "$HOME/.panboticon/etc/ssh_config/$1.ssh_config" ]
@@ -87,4 +93,7 @@ do
     xargs rm -f
     echo "$INSTANCE_ID"
 done |
-xargs aws ec2 terminate-instances --instance-ids
+if [ "$TEST" ]
+then xargs echo : aws ec2 terminate-instances --instance-ids
+else xargs aws ec2 terminate-instances --instance-ids
+fi
