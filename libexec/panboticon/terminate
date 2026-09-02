@@ -90,7 +90,10 @@ while read INSTANCE_ID
 do
     find "$HOME/.panboticon/etc/ssh_config" -name "*.ssh_config" |
     xargs grep -E -l '^    Hostname '"$INSTANCE_ID"'$' |
-    xargs rm -f
+    if [ "$TEST" ]
+    then xargs echo : rm -f
+    else xargs rm -f
+    fi
     echo "$INSTANCE_ID"
 done |
 if [ "$TEST" ]
