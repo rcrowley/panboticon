@@ -2,12 +2,11 @@
 # Panboticon completion for Bash
 #
 # Usage: . lib/panboticon/completion.bash
-#        complete -F _panboticon panboticon
 #
 
 _panboticon() {
 
-    PANBOTICON_PREFIX="$(cd "$(dirname "$(dirname "$(which "panboticon")")")" && pwd)"
+    PANBOTICON_PREFIX="$(panboticon config "PANBOTICON_PREFIX")"
     PANBOTICON_LIBEXEC="$PANBOTICON_PREFIX/libexec/panboticon"
 
     if [ "$1" != "panboticon" ]

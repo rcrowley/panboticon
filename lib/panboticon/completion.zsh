@@ -2,12 +2,11 @@
 # Panboticon completion for Zsh
 #
 # Usage: . lib/panboticon/completion.zsh
-#        compdef _panboticon panboticon
 #
 
 _panboticon() {
 
-    PANBOTICON_PREFIX="$(cd "$(dirname "$(dirname "$(which "panboticon")")")" && pwd)"
+    PANBOTICON_PREFIX="$(panboticon config "PANBOTICON_PREFIX")"
     PANBOTICON_LIBEXEC="$PANBOTICON_PREFIX/libexec/panboticon"
 
     local -a subcommands

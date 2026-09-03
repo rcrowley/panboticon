@@ -3,12 +3,13 @@
 set -e
 
 usage() {
-    printf "Usage: panboticon config [-f \e[4mformat\e[0m]\n" >&2
+    printf "Usage: panboticon config [-f \e[4mformat\e[0m] [\e[4mvariable\e[0m]\n" >&2
     printf "  -f \e[4mformat\e[0m  output format (one of \"env\", \"json\"; defaults to \"env\")\n" >&2
+    printf "  \e[4mvariable\e[0m   variable name from the Panboticon configuration to print; incompatible with -f\n" >&2
     exit "$1"
 }
 
-FORMAT="env"
+FORMAT=""
 if [ "$(basename "$0")" = "$1" ]
 then shift
 fi
@@ -26,8 +27,17 @@ do
 
     esac
 done
-if [ "$1" ]
+if [ "$FORMAT" -a "$1" -o "$2" ]
 then usage 1
+fi
+if [ -z "$FORMAT" ]
+then FORMAT="env"
+fi
+
+if [ "$1" ]
+then
+    eval "echo \"\$$1\""
+    exit
 fi
 
 env |
