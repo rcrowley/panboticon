@@ -208,6 +208,7 @@ do
     then break
     fi
 done
+
 mkdir -p "$HOME/.panboticon/etc/ssh_config"
 mkdir -m "0700" -p "$HOME/.panboticon/run/control"
 cat >"$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" <<EOF
@@ -228,6 +229,7 @@ do
     sleep 2
     printf "." >&2
 done
+
 echo " Done! Login: \`panboticon ssh $NAME\`" >&2
 
 bootstrap "$NAME"
