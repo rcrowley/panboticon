@@ -44,20 +44,20 @@ do
 
     if [ -z "$FORCE" -o "$TEST" ]
     then
-        echo "Searching for uncommitted changes in Git repositories in ~$PANBOTICON_HUMAN_USER and ~$PANBOTICON_BOT_USER on $1 ..." >&2
+        echo "Searching for uncommitted/unpushed changes in Git repositories in ~$PANBOTICON_HUMAN_USER and ~$PANBOTICON_BOT_USER on $1 ..." >&2
         DIFF_HUMAN=0 DIFF_BOT=0
-        if ! ssh "$1" find "/home/$PANBOTICON_HUMAN_USER" -name ".git" \| xargs dirname \| xargs -I _ sh -c \''cd _ && pwd && git diff --color --exit-code --stat && git diff --cached --color --exit-code --stat'\'>&2
+        if ! ssh "$1" find "/home/$PANBOTICON_HUMAN_USER" -name ".git" \| xargs dirname \| xargs -I _ sh -c \''cd _ && pwd && git diff --color --exit-code --stat && git diff --cached --color --exit-code --stat && git log --oneline origin/HEAD..HEAD | diff -u /dev/null -'\'>&2
         then DIFF_HUMAN=1
         fi
-        if ! ssh -b "$1" find "/home/$PANBOTICON_BOT_USER" -name ".git" \| xargs dirname \| xargs -I _ sh -c \''cd _ && pwd && git diff --color --exit-code --stat && git diff --cached --color --exit-code --stat'\' >&2
+        if ! ssh -b "$1" find "/home/$PANBOTICON_BOT_USER" -name ".git" \| xargs dirname \| xargs -I _ sh -c \''cd _ && pwd && git diff --color --exit-code --stat && git diff --cached --color --exit-code --stat && git log --oneline origin/HEAD..HEAD | diff -u /dev/null -'\' >&2
         then DIFF_BOT=1
         fi
         echo "... Done!" >&2
         if [ "$DIFF_HUMAN" = 1 ]
-        then echo "There are uncommitted changes in Git repositories in ~$PANBOTICON_HUMAN_USER." >&2
+        then echo "There are uncommitted/unpushed changes in Git repositories in ~$PANBOTICON_HUMAN_USER." >&2
         fi
         if [ "$DIFF_BOT" = 1 ]
-        then echo "There are uncommitted changes in Git repositories in ~$PANBOTICON_BOT_USER." >&2
+        then echo "There are uncommitted/unpushed changes in Git repositories in ~$PANBOTICON_BOT_USER." >&2
         fi
         if [ -z "$TEST" ]
         then
