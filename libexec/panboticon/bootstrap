@@ -144,6 +144,13 @@ EOF
     ssh "$NAME" sudo chmod +x "/usr/local/bin/xdg-open"
     ssh "$NAME" sudo ln -f -s "xdg-open" "/usr/local/bin/open"
 
+    # Mount whatever instance storage drives we have as /mnt/instance-storage.
+    printf "RAIDing, formatting, and mounting instance storage drives ..." >&2
+    ssh "$NAME" mkdir -p ".panboticon"
+    scp -q "$PANBOTICON_LIB/instance-storage.sh" "$NAME:.panboticon/instance-storage.sh"
+    sh_q ssh "$NAME" sh ".panboticon/instance-storage.sh"
+    echo " Done!" >&2
+
     # Authenticate the human user with GitHub.
     echo "Authenticating the human user, $PANBOTICON_HUMAN_USER, with GitHub ..." >&2
     ssh -t "$NAME" gh auth status \|\| gh auth login
@@ -161,7 +168,6 @@ EOF
         STATUS=1
         continue
     fi
-    ssh "$NAME" mkdir -p ".panboticon"
     ssh "$NAME" mkdir -m 0700 -p ".panboticon/run/control"
     ssh -b "$NAME" mkdir -p ".panboticon/bin" ".panboticon/etc/github-app" "bin"
     ssh -b "$NAME" mkdir -m 0750 -p ".panboticon/run/control"
