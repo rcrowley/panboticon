@@ -79,13 +79,12 @@ do
     fi
     echo "Bootstrapping Panboticon instance $NAME ..." >&2
 
-    # Install Docker rootless, gh, iptables-persistent, screen, and tmux -
-    # almost everything we need to let the bot run wild in its cell.
+    # Install Docker rootless, gh, iptables-persistent, and nc.
     ssh "$NAME" sudo install -m 0755 -d "/etc/apt/keyrings"
     ssh "$NAME" sudo curl -L -S -f -o "/etc/apt/keyrings/docker.asc" -s "https://download.docker.com/linux/ubuntu/gpg"
     ssh "$NAME" sudo sh -c "'"'. "/etc/os-release" && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME:-$VERSION_CODENAME} stable" >"/etc/apt/sources.list.d/docker.list"'"'"
     sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get update
-    sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "containerd.io" "dbus-user-session" "docker-buildx-plugin" "docker-ce" "docker-ce-cli" "docker-ce-rootless-extras" "docker-compose-plugin" "fuse-overlayfs" "gh" "iptables-persistent" "netcat-openbsd" "screen" "slirp4netns" "tmux" "uidmap"
+    sh_q ssh "$NAME" sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "containerd.io" "dbus-user-session" "docker-buildx-plugin" "docker-ce" "docker-ce-cli" "docker-ce-rootless-extras" "docker-compose-plugin" "fuse-overlayfs" "gh" "iptables-persistent" "netcat-openbsd" "slirp4netns" "uidmap"
     sh_q ssh "$NAME" sudo systemctl disable --now "containerd.service" "docker.service" "docker.socket" || :
     ssh "$NAME" sudo rm -f "/var/run/docker.sock"
     ssh "$NAME" sudo tee "/etc/apparmor.d/rootlesskit" >"/dev/null" <<'EOF'
