@@ -193,6 +193,9 @@ EOF
     ssh -b "$NAME" git config --global "credential.https://github.com.helper" "'"'!'"~/.panboticon/bin/git-credential-helper'"
     ssh -b "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh -b "$NAME" git config --global "credential.https://github.com.username" "x-access-token"
+    ssh -b "$NAME" git config --global "credential.https://gist.github.com.helper" "'"'!'"~/.panboticon/bin/git-credential-helper'"
+    ssh -b "$NAME" git config --global "credential.https://gist.github.com.useHttpPath" "true"
+    ssh -b "$NAME" git config --global "credential.https://gist.github.com.username" "x-access-token"
     ssh -b "$NAME" git config --global "init.defaultBranch" "main"
     ssh -b "$NAME" git config --global --replace-all "url.https://github.com/.insteadOf" "git@github.com:"
     ssh -b "$NAME" git config --add --global "url.https://github.com/.insteadOf" "ssh://git@github.com/"
@@ -230,7 +233,7 @@ EOF
     fi
     if [ -f "$PANBOTICON_BOT_BOOTSTRAP" ]
     then
-        echo "Running custom bootstrapping program $PANBOTICON_BOT_BOOTSTRAP for the botuser, $PANBOTICON_BOT_USER..." >&2
+        echo "Running custom bootstrapping program $PANBOTICON_BOT_BOOTSTRAP for the bot user, $PANBOTICON_BOT_USER..." >&2
         EXT="${PANBOTICON_BOT_BOOTSTRAP##*.}"
         scp -b -q "$PANBOTICON_BOT_BOOTSTRAP" "$NAME:.panboticon/bootstrap.$EXT"
         case "$EXT" in
