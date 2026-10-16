@@ -184,8 +184,8 @@ EOF
     then scp -b -q "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" "$NAME:.panboticon/etc/github-app/private-key.pem"
     elif echo "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" | grep -q "^op://"
     then
-        op read "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" |
-        ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/private-key.pem"'" >"/dev/null"'"'"
+        op read "$PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY" >"$TMP/github-app-private-key.pem"
+        ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/private-key.pem"'" >"/dev/null"'"'" <"$TMP/github-app-private-key.pem"
     else
         echo "Could not find the GitHub App private key $PANBOTICON_BOT_GITHUB_APP_PRIVATE_KEY. The bot user will not have GitHub access yet." >&2
         STATUS=1
