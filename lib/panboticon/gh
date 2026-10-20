@@ -95,8 +95,51 @@ cmd_repo_create() {
 cmd_pr() {
     case "${1:-}" in
         create) shift; cmd_pr_create "$@";;
+        view) shift; cmd_pr_view "$@";;
         *) exit 22;;
     esac
+}
+
+cmd_pr_view() {
+    [ $# -le 1 ] || exit 22
+
+    if ! _remote_url="$(git remote get-url origin 2>/dev/null)"
+    then
+        printf 'could not determine repository: not in a git repository or no origin remote\n' >&2
+        exit 1
+    fi
+    _remote_url="${_remote_url%.git}"
+    case "$_remote_url" in
+        https://github.com/*) _owner_repo="${_remote_url#https://github.com/}";;
+        git@github.com:*) _owner_repo="${_remote_url#git@github.com:}";;
+        ssh://git@github.com/*) _owner_repo="${_remote_url#ssh://git@github.com/}";;
+        *)
+            printf 'could not determine repository from remote URL: %s\n' "$_remote_url" >&2
+            exit 1;;
+    esac
+
+    if [ $# -eq 1 ]
+    then
+        case "$1" in
+            https://github.com/*/pull/*) _number="${1##*/}";;
+            *[!0-9]*) exit 22;;
+            *) _number="$1";;
+        esac
+        _response="$(api GET "/repos/$_owner_repo/pulls/$_number")"
+    else
+        _head="$(git rev-parse --abbrev-ref HEAD)"
+        _owner="${_owner_repo%%/*}"
+        _response="$(api GET "/repos/$_owner_repo/pulls?head=$_owner:$_head&state=all")"
+        _response="$(printf '%s' "$_response" | jq '.[0] // empty')"
+    fi
+
+    if [ -z "$_response" ] || [ "$(printf '%s' "$_response" | jq -r 'type')" != object ]
+    then
+        printf 'could not find pull request\n' >&2
+        exit 1
+    fi
+
+    printf '%s\n' "$_response" | jq -r '"\(.title)\n\(.html_url)\n\(.state)\n\(.user.login)\n\n\(.body // "")"'
 }
 
 cmd_pr_create() {
