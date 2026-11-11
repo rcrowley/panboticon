@@ -108,12 +108,6 @@ aws_duplicates_ok ec2 authorize-security-group-egress \
 echo " Done! Security group ID: $SECURITY_GROUP_ID" >&2
 
 printf "Launching the Panboticon instance ..." >&2
-ssh-add -L >"$TMP/authorized_keys"
-if [ ! -s "$TMP/authorized_keys" ]
-then
-    echo "No public keys found in the SSH agent. Run \`ssh-add\` to populate the agent so Panboticon knows who to authorize for SSH login." >&2
-    exit 1
-fi
 cat >"$TMP/user-data.sh" <<USER_DATA_EOF
 #!/bin/sh
 
@@ -168,17 +162,10 @@ AcceptEnv OPENER_SOCKET_C
 StreamLocalBindUnlink yes
 EOF
 systemctl restart "ssh"
-install -d -m 0700 "/root/.ssh"
-cat >"/root/.ssh/authorized_keys" <<EOF
-$(cat "$TMP/authorized_keys")
-EOF
-install -d -g "$PANBOTICON_HUMAN_USER" -m 0750 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.panboticon" "/home/$PANBOTICON_HUMAN_USER/.ssh"
+install -d -g "$PANBOTICON_HUMAN_USER" -m 0750 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.panboticon"
 install -d -g "$PANBOTICON_HUMAN_USER" -m 0700 -o "$PANBOTICON_HUMAN_USER" "/home/$PANBOTICON_HUMAN_USER/.panboticon/run" "/home/$PANBOTICON_HUMAN_USER/.panboticon/run/opener"
-install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.panboticon" "/home/$PANBOTICON_BOT_USER/.ssh"
+install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.panboticon"
 install -d -g "$PANBOTICON_BOT_USER" -m 0750 -o "$PANBOTICON_BOT_USER" "/home/$PANBOTICON_BOT_USER/.panboticon/run" "/home/$PANBOTICON_BOT_USER/.panboticon/run/opener"
-install -g "$PANBOTICON_HUMAN_USER" -m 0600 -o "$PANBOTICON_HUMAN_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_HUMAN_USER/.ssh"
-install -g "$PANBOTICON_BOT_USER" -m 0640 -o "$PANBOTICON_BOT_USER" "/root/.ssh/authorized_keys" "/home/$PANBOTICON_BOT_USER/.ssh" 
-chattr +i "/home/$PANBOTICON_BOT_USER/.ssh/authorized_keys"
 
 snap start "amazon-ssm-agent"
 USER_DATA_EOF
