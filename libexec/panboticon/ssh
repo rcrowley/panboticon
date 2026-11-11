@@ -47,11 +47,21 @@ then
     set -- "$(cat "$TMP/boxen.txt")"
 fi
 
+NAME=""
 for A in "$@"
 do
     if [ -f "$HOME/.panboticon/etc/ssh_config/$A.ssh_config" ]
-    then exec "$SSH" -F "$HOME/.panboticon/etc/ssh_config/$A.ssh_config" -l "$USER" "$@"
+    then
+        NAME="$A"
+        break
     fi
 done
-echo "Could not find the name of a Panboticon instance with an SSH configuration amonst the arguments: $*" >&2
-exit 1
+if [ -z "$NAME" ]
+then
+    echo "Could not find the name of a Panboticon instance with an SSH configuration amonst the arguments: $*" >&2
+    exit 1
+fi
+
+aws_ec2_instance_connect "$NAME" "$U"
+
+"$SSH" -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -l "$U" "$@"

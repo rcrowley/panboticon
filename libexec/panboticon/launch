@@ -121,7 +121,7 @@ echo "$NAME" >"/etc/hostname"
 until sudo apt-get update
 do :
 done
-until sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "$(basename "$PANBOTICON_HUMAN_SHELL")" "$(basename "$PANBOTICON_BOT_SHELL")" "auditd" "audispd-plugins"
+until sudo DEBIAN_FRONTEND="noninteractive" apt-get -y install "$(basename "$PANBOTICON_HUMAN_SHELL")" "$(basename "$PANBOTICON_BOT_SHELL")" "auditd" "audispd-plugins" "ec2-instance-connect"
 do :
 done
 

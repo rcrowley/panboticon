@@ -77,3 +77,25 @@ aws_duplicates_ok() {
         fi
     fi
 }
+
+aws_ec2_instance_connect() {
+    _AWS_EIC_NAME="$1" _AWS_EIC_U="$2"
+    _AWS_EIC_SSH="$(
+        which -a "ssh" |
+        grep -v "$PANBOTICON_LIBEXEC" |
+        head -n 1
+    )"
+    _AWS_EIC_SSH_CONFIG="$HOME/.panboticon/etc/ssh_config/$_AWS_EIC_NAME.ssh_config"
+    if "$_AWS_EIC_SSH" -F "$_AWS_EIC_SSH_CONFIG" -O "check" -l "$_AWS_EIC_U" "$_AWS_EIC_NAME" 2>"/dev/null"
+    then return
+    fi
+    _AWS_EIC_TMP="$(mktemp -d -p "$TMP")"
+    ssh-keygen -C "panboticon-$_AWS_EIC_NAME-$_AWS_EIC_U" -f "$_AWS_EIC_TMP/id_ed25519" -N "" -q -t "ed25519"
+    aws ec2-instance-connect send-ssh-public-key \
+        --instance-id "$("$_AWS_EIC_SSH" -F "$_AWS_EIC_SSH_CONFIG" -G "$_AWS_EIC_NAME" | awk '$1 == "hostname" { print $2 }')" \
+        --instance-os-user "$_AWS_EIC_U" \
+        --output "off" \
+        --ssh-public-key "file://$_AWS_EIC_TMP/id_ed25519.pub"
+    "$_AWS_EIC_SSH" -F "$_AWS_EIC_SSH_CONFIG" -N -f -i "$_AWS_EIC_TMP/id_ed25519" -l "$_AWS_EIC_U" -o IdentitiesOnly="yes" -o StrictHostKeyChecking="accept-new" "$_AWS_EIC_NAME"
+    rm -f -r "$_AWS_EIC_TMP"
+}
