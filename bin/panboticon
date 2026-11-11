@@ -52,4 +52,4 @@ fi
 
 export PATH="$PANBOTICON_LIBEXEC:$PATH"
 
-exec "$SUBCOMMAND" "$@"
+"$SUBCOMMAND" "$@"

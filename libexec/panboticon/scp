@@ -44,12 +44,16 @@ do
         *":"*)
             NAME="${A%%:*}"
             if [ "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" ]
-            then exec "$SCP" -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -o "User=$USER" "$@"
+            then
+                "$SCP" -F "$HOME/.panboticon/etc/ssh_config/$NAME.ssh_config" -o "User=$USER" "$@"
+                exit
             fi;;
         ":"*)
             boxen >"$TMP/boxen.txt"
             if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
-            then exec "$SCP" -F "$HOME/.panboticon/etc/ssh_config/$(cat "$TMP/boxen.txt").ssh_config" -o "User=$USER" "$@"
+            then
+                "$SCP" -F "$HOME/.panboticon/etc/ssh_config/$(cat "$TMP/boxen.txt").ssh_config" -o "User=$USER" "$@"
+                exit
             fi;;
     esac
 done

@@ -39,13 +39,13 @@ aws ec2 describe-instances --filters \
     Name="tag:Manager",Values="Panboticon" \
     Name="tag:Owner",Values="$USER" |
 case "$FORMAT" in
-    "all") exec jq -e -r '.Reservations[].Instances[] | "\(.Tags[] | select(.Key == "Name").Value) \(.PublicIpAddress) \(.InstanceId)"';;
-    "id") exec jq -e -r '.Reservations[].Instances[].InstanceId';;
-    "ip") exec jq -e -r '.Reservations[].Instances[].PublicIpAddress';;
+    "all") jq -e -r '.Reservations[].Instances[] | "\(.Tags[] | select(.Key == "Name").Value) \(.PublicIpAddress) \(.InstanceId)"';;
+    "id") jq -e -r '.Reservations[].Instances[].InstanceId';;
+    "ip") jq -e -r '.Reservations[].Instances[].PublicIpAddress';;
     "json")
         if [ -t 1 ]
-        then exec less
-        else exec cat
+        then less
+        else cat
         fi;;
-    "name") exec jq -e -r '.Reservations[].Instances[].Tags[] | select(.Key == "Name").Value';;
+    "name") jq -e -r '.Reservations[].Instances[].Tags[] | select(.Key == "Name").Value';;
 esac

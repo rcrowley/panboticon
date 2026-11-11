@@ -41,10 +41,10 @@ fi
 if [ -z "$1" ]
 then
     boxen >"$TMP/boxen.txt"
-    if [ "$(wc -l <"$TMP/boxen.txt")" -eq 1 ]
-    then exec "$SSH" -F "$HOME/.panboticon/etc/ssh_config/$(cat "$TMP/boxen.txt").ssh_config" -l "$USER" "$(cat "$TMP/boxen.txt")"
-    else usage 1
+    if [ "$(wc -l <"$TMP/boxen.txt")" -ne 1 ]
+    then usage 1
     fi
+    set -- "$(cat "$TMP/boxen.txt")"
 fi
 
 for A in "$@"

@@ -1,7 +1,7 @@
 set -e
 
 export TMP="$(mktemp -d)"
-trap "rm -f -r \"$TMP\"" EXIT
+trap "rm -f -r \"$TMP\"" EXIT HUP INT TERM
 
 : ${PANBOTICON_CONFIG:="$HOME/.panboticon.json"}
 export PANBOTICON_CONFIG
