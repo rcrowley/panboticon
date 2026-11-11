@@ -48,6 +48,12 @@ grep -E "^: \\\$\\{PANBOTICON_[_0-9A-Z]+:=\"[-./_~@0-9:A-Za-z]*\"\\}\$" >"$TMP/c
 . "$TMP/config.sh"
 . "$TMP/export.sh"
 
+if [ -z "$PANBOTICON_HUMAN_USER" -o -z "$PANBOTICON_BOT_USER" ]
+then
+    echo "PANBOTICON_HUMAN_USER and PANBOTICON_BOT_USER must be set in the configuration file or environment." >&2
+    exit 1
+fi
+
 export PANBOTICON_OPENER_FORK="rcrowley" PANBOTICON_OPENER_VERSION="v0.1.7-rcrowley.0"
 export PANBOTICON_OPENER_ARCH="$(uname -m)" PANBOTICON_OPENER_OS="$(uname -s | tr "[:upper:]" "[:lower:]")"
 case "$PANBOTICON_OPENER_ARCH" in
