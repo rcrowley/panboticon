@@ -152,7 +152,7 @@ EOF
 
     # Authenticate the human user with GitHub.
     echo "Authenticating the human user, $PANBOTICON_HUMAN_USER, with GitHub ..." >&2
-    ssh -t "$NAME" gh auth status \|\| gh auth login
+    ssh -t "$NAME" gh auth status \|\| gh auth login # TODO expiring tokens as soon as gh 2.103 makes it to Ubuntu
     ssh "$NAME" git config --global --replace-all "credential.https://github.com.helper" "'"'!/usr/bin/env gh auth git-credential'"'"
     ssh "$NAME" git config --global "credential.https://github.com.useHttpPath" "true"
     ssh "$NAME" git config --global "user.email" "$PANBOTICON_HUMAN_EMAIL"
