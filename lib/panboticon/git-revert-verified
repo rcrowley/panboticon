@@ -1,0 +1,154 @@
+#!/bin/sh
+
+set -e
+
+delete_verifier_branch() {
+    curl \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer $TOKEN" \
+        -X "DELETE" \
+        -f \
+        -s \
+        "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH" >"/dev/null" || :
+}
+
+fail() {
+    echo "$1" >&2
+    if [ -f "$2" ]
+    then cat "$2" >&2
+    fi
+    delete_verifier_branch
+    git reset -q --soft "$BASE"
+    exit 1
+}
+
+SEQUENCER_HEAD="$(git rev-parse --git-path "sequencer/head")"
+if [ -f "$SEQUENCER_HEAD" ]
+then BASE="$(cat "$SEQUENCER_HEAD")"
+else BASE="$(git rev-parse "HEAD")"
+fi
+
+git -c "commit.gpgSign=false" revert "$@"
+
+if [ -f "$SEQUENCER_HEAD" ]
+then exit 0
+fi
+
+TMP="$(mktemp -d)"
+trap "rm -f -r \"$TMP\"" EXIT
+
+git rev-list --reverse "$BASE..HEAD" >"$TMP/commits.txt"
+if [ ! -s "$TMP/commits.txt" ]
+then exit 0
+fi
+if ! git merge-base --is-ancestor "$BASE" "HEAD"
+then
+    echo "HEAD does not descend from $BASE" >&2
+    exit 1
+fi
+if [ -n "$(git rev-list --merges "$BASE..HEAD")" ]
+then
+    echo "merge commits in $BASE..HEAD" >&2
+    exit 1
+fi
+
+COMMIT="$(git rev-parse "HEAD")"
+TREE="$(git rev-parse "HEAD^{tree}")"
+
+REMOTE_URL="$(git remote get-url "origin")"
+if [ -z "$REMOTE_URL" ]
+then
+    echo "no remote \"origin\"" >&2
+    exit 1
+fi
+
+REPO="$(echo "$REMOTE_URL" | sed 's/^https:\/\/github\.com\///; s/^git@github\.com://; s/\.git$//')"
+case "$REMOTE_URL" in
+    "https://github.com/"?*"/"?*|"git@github.com:"?*"/"?*) ;;
+    *)
+        echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
+        exit 1;;
+esac
+case "$REPO" in
+    *"/"*"/"*)
+        echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
+        exit 1;;
+    ?*/?*) ;;
+    *)
+        echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
+        exit 1;;
+esac
+ORG="${REPO%%/*}"
+
+TOKEN="$(
+    printf "protocol=https\nhost=github.com\npath=%s/x\nusername=x-access-token\n\n" "$ORG" |
+    git credential fill |
+    sed -n 's/^password=//p'
+)"
+if [ -z "$TOKEN" ]
+then
+    echo "failed to mint token for organization: $ORG." >&2
+    exit 1
+fi
+
+VERIFIER_BRANCH="panboticon-verifier-$COMMIT"
+if ! git push "origin" "HEAD:refs/heads/$VERIFIER_BRANCH" >"$TMP/push.txt" 2>&1
+then
+    echo "failed to push to GitHub" >&2
+    cat "$TMP/push.txt" >&2
+    git reset -q --soft "$BASE"
+    exit 1
+fi
+
+PARENT="$BASE"
+while read -r C <&3
+do
+    jq \
+        --arg msg "$(git log -1 --format="%B" "$C")" \
+        --arg parent "$PARENT" \
+        --arg tree "$(git rev-parse "$C^{tree}")" \
+        -e -n \
+        '{message: $msg, parents: [$parent], tree: $tree}' >"$TMP/POST-commits.req.json"
+    if ! curl \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        -X "POST" \
+        -d @"$TMP/POST-commits.req.json" \
+        -f \
+        -o "$TMP/POST-commits.resp.json" \
+        -s \
+        "https://api.github.com/repos/$REPO/git/commits"
+    then fail "failed to push commit via the GitHub API" "$TMP/POST-commits.resp.json"
+    fi
+    PARENT="$(jq -e -r '.sha' "$TMP/POST-commits.resp.json" || :)"
+    if [ -z "$PARENT" -o "$PARENT" = "null" ]
+    then fail "failed to push commit via the GitHub API" "$TMP/POST-commits.resp.json"
+    fi
+done 3<"$TMP/commits.txt"
+VERIFIED_COMMIT="$PARENT"
+
+jq \
+    --arg sha "$VERIFIED_COMMIT" \
+    -e -n \
+    '{sha: $sha, force: true}' >"$TMP/PATCH-refs.req.json"
+if ! curl \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    -X "PATCH" \
+    -d @"$TMP/PATCH-refs.req.json" \
+    -f \
+    -o "$TMP/PATCH-refs.resp.json" \
+    -s \
+    "https://api.github.com/repos/$REPO/git/refs/heads/$VERIFIER_BRANCH"
+then fail "failed to update branch ref" "$TMP/PATCH-refs.resp.json"
+fi
+
+git fetch -q "origin" "refs/heads/$VERIFIER_BRANCH"
+if [ "$(git rev-parse "FETCH_HEAD")" != "$VERIFIED_COMMIT" ] || [ "$(git rev-parse "FETCH_HEAD^{tree}")" != "$TREE" ]
+then fail "fetched commit does not match $VERIFIED_COMMIT with tree $TREE"
+fi
+git reset -q --soft "$VERIFIED_COMMIT"
+
+delete_verifier_branch

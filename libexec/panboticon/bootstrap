@@ -173,6 +173,7 @@ EOF
     scp -b -q "$PANBOTICON_LIB/gh" "$NAME:bin/gh"
     scp -b -q "$PANBOTICON_LIB/git" "$NAME:bin/git"
     scp -b -q "$PANBOTICON_LIB/git-commit-verified" "$NAME:bin/git-commit-verified"
+    scp -b -q "$PANBOTICON_LIB/git-revert-verified" "$NAME:bin/git-revert-verified"
     scp -b -q "$PANBOTICON_LIB/git-credential-helper" "$NAME:.panboticon/bin/git-credential-helper"
     echo "$PANBOTICON_BOT_GITHUB_APP_ID" |
     ssh -b "$NAME" sh -c "'"'tee "'".panboticon/etc/github-app/id.txt"'" >"/dev/null"'"'"

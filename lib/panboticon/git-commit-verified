@@ -19,11 +19,17 @@ then
 fi
 
 REPO="$(echo "$REMOTE_URL" | sed 's/^https:\/\/github\.com\///; s/^git@github\.com://; s/\.git$//')"
+case "$REMOTE_URL" in
+    "https://github.com/"?*"/"?*|"git@github.com:"?*"/"?*) ;;
+    *)
+        echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
+        exit 1;;
+esac
 case "$REPO" in
     *"/"*"/"*)
         echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
         exit 1;;
-    */*) ;;
+    ?*/?*) ;;
     *)
         echo "couldn't parse repo from remote URL: $REMOTE_URL" >&2
         exit 1;;
@@ -120,10 +126,13 @@ then
     exit 1
 fi
 
-git fetch -q "origin" "$VERIFIER_BRANCH"
-git stash >"/dev/null"
-git reset --hard -q "origin/$VERIFIER_BRANCH"
-git stash pop >"/dev/null"
+git fetch -q "origin" "refs/heads/$VERIFIER_BRANCH"
+if [ "$(git rev-parse "FETCH_HEAD")" != "$VERIFIED_COMMIT" ] || [ "$(git rev-parse "FETCH_HEAD^{tree}")" != "$TREE" ]
+then
+    echo "fetched commit does not match $VERIFIED_COMMIT with tree $TREE" >&2
+    exit 1
+fi
+git reset -q --soft "$VERIFIED_COMMIT"
 
 curl \
     -H "Accept: application/vnd.github+json" \
