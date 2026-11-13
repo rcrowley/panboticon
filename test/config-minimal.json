@@ -1,0 +1,6 @@
+{
+    "#": "This is a minimal test configuration file.",
+
+    "PANBOTICON_HUMAN_USER": "rcrowley",
+    "PANBOTICON_BOT_USER": "rbotley"
+}

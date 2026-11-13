@@ -5,7 +5,7 @@ set -e
 if [ ! -f "$HOME/.panboticon.json" ]
 then
     echo "{}" >"$HOME/.panboticon.json"
-    trap "rm -f \"$HOME/panboticon.json\"" EXIT
+    trap "rm -f \"$HOME/.panboticon.json\"" EXIT
 fi
 
 (
@@ -17,6 +17,8 @@ fi
 
 (
     PANBOTICON_CONFIG="$PANBOTICON_LIB/config.json"
+    PANBOTICON_HUMAN_USER="rcrowley"
+    PANBOTICON_BOT_USER="rbotley"
     . "$PANBOTICON_LIB/configure.sh"
     set -x
     test "$PANBOTICON_CONFIG" = "$PANBOTICON_LIB/config.json"
@@ -26,9 +28,9 @@ fi
     test -z "$PANBOTICON_SUBNET_ID"
     test -z "$PANBOTICON_INSTANCE_PROFILE"
     test -z "$PANBOTICON_INSTANCE_TYPE"
-    test -z "$PANBOTICON_HUMAN_USER"
-    test -z "$PANBOTICON_BOT_USER"
     test "$PANBOTICON_EBS_VOLUME_SIZE" = "100"
+    test "$PANBOTICON_HUMAN_USER" = "rcrowley"
+    test "$PANBOTICON_BOT_USER" = "rbotley"
     test -z "$PANBOTICON_HUMAN_EMAIL"
     test -z "$PANBOTICON_BOT_GITHUB_APP_ID"
     test "$PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS" = '[]'
