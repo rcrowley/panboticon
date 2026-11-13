@@ -28,6 +28,7 @@ fi
     test -z "$PANBOTICON_INSTANCE_TYPE"
     test -z "$PANBOTICON_HUMAN_USER"
     test -z "$PANBOTICON_BOT_USER"
+    test "$PANBOTICON_EBS_VOLUME_SIZE" = "100"
     test -z "$PANBOTICON_HUMAN_EMAIL"
     test -z "$PANBOTICON_BOT_GITHUB_APP_ID"
     test "$PANBOTICON_BOT_GITHUB_APP_INSTALLATIONS" = '[]'
@@ -53,11 +54,27 @@ fi
     test -z "$PANBOTICON_SUBNET_ID"
     test "$PANBOTICON_INSTANCE_PROFILE" = "test"
     test "$PANBOTICON_INSTANCE_TYPE" = "t4g.nano"
+    test "$PANBOTICON_EBS_VOLUME_SIZE" = "1024"
     test "$PANBOTICON_HUMAN_USER" = "rcrowley"
     test "$PANBOTICON_BOT_USER" = "rbotley"
     test "$PANBOTICON_HUMAN_EMAIL" = "rcrowley@rcrowley.org"
     test "$PANBOTICON_HUMAN_SHELL" = "/bin/zsh"
     test "$PANBOTICON_BOT_SHELL" = "/bin/bash"
+)
+
+(
+    PANBOTICON_CONFIG="$(dirname "$0")/config.json"
+    PANBOTICON_EBS_VOLUME_SIZE="2048"
+    . "$PANBOTICON_LIB/configure.sh"
+    set -x
+    test "$PANBOTICON_EBS_VOLUME_SIZE" = "2048"
+)
+
+(
+    PANBOTICON_CONFIG="$(dirname "$0")/config-minimal.json"
+    . "$PANBOTICON_LIB/configure.sh"
+    set -x
+    test "$PANBOTICON_EBS_VOLUME_SIZE" = "100"
 )
 
 # TODO test the -c option, too

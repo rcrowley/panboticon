@@ -172,7 +172,7 @@ USER_DATA_EOF
 INSTANCE_ID="$(
     aws ec2 run-instances \
         --associate-public-ip-address \
-        --block-device-mappings Ebs=\{VolumeSize=100\},DeviceName="/dev/sda1" \
+        --block-device-mappings Ebs=\{VolumeSize="$PANBOTICON_EBS_VOLUME_SIZE"\},DeviceName="/dev/sda1" \
         --image-id "$IMAGE_ID" \
         --iam-instance-profile Name="$PANBOTICON_INSTANCE_PROFILE" \
         --instance-type "$PANBOTICON_INSTANCE_TYPE" \

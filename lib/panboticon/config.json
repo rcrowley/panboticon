@@ -19,6 +19,9 @@
     "#": "AWD EC2 instance type for Panboticon instances.",
     "PANBOTICON_INSTANCE_TYPE": "",
 
+    "#": "Size, in GiB, of the root EBS volume for Panboticon instances.",
+    "PANBOTICON_EBS_VOLUME_SIZE": "100",
+
     "#": "Usernames for the human and bot users.",
     "PANBOTICON_HUMAN_USER": "",
     "PANBOTICON_BOT_USER": "",
